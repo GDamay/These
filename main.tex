@@ -1,0 +1,97 @@
+\documentclass[a4paper]{book}
+
+%%% Encoding packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+\usepackage{csquotes}%For biblatex
+
+\usepackage{amsfonts} %\mathbb
+\usepackage{amsmath} %\text in math mode
+\usepackage{bbm} %\mathbbm = mathbb for numbers
+\usepackage{amsthm} %proof environment
+\usepackage{cancel}%\cancel command
+
+\usepackage[caption=false,font=footnotesize]{subfig} %subfloats
+
+%To write algorithms ("algorithm" environment)
+\usepackage{algorithm}
+\usepackage[italicComments=true, noEnd=false]{algpseudocodex}
+
+\usepackage{biblatex} % For bibliography
+\addbibresource{Bibliography/Classification.bib}
+\addbibresource{Bibliography/Decision_trees.bib}
+\addbibresource{Bibliography/Centrality.bib}
+\addbibresource{Bibliography/Graph_Embedding.bib}
+\addbibresource{Bibliography/Com_detection.bib}
+\addbibresource{Bibliography/datasets.bib}
+\addbibresource{Bibliography/Interpretability.bib}
+\addbibresource{Bibliography/misc.bib}
+
+% \usepackage{helvet} %Style package
+% \renewcommand{\familydefault}{\sfdefault} %Style package
+
+% \usepackage{geometry} %Set margins; Style package
+% \geometry{
+% 	left=16mm,
+% 	top=30mm,
+% 	right=16mm,
+% 	bottom=30mm
+% }
+\usepackage{xcolor} % For red text in TODO
+
+\renewcommand\descriptionlabel[1]{$\bullet$ \textbf{#1}} % Style : add bullet before description (dictionnaries) labels
+
+% Add a footnote with the todo
+\newcommand{\todo}[1]{%\PackageWarning{todo}{There is an unresolved TODO : #1}
+\textcolor{red}{\footnote{\textcolor{red}{TODO: #1}}}}
+% Encapsulate formating of terms that are defined in the sentence
+% e.g. "An \define{apple} is a fruit"
+\newcommand{\define}[1]{\textit{#1}}
+
+\newcommand{\codetrue}[0]{\texttt{true}}
+\newcommand{\codefalse}[0]{\texttt{false}}
+
+%%% Math symbols
+\newcommand{\realset}[0]{\mathbb{R}}
+\newcommand{\naturalset}[0]{\mathbb{N}}
+\newcommand{\ones}[0]{\mathbbm{1}}
+\newcommand{\zeros}[1]{0_{#1}}
+\newcommand{\vect}[1]{\boldsymbol{#1}}
+\newcommand{\mat}[1]{\boldsymbol{#1}}
+\newcommand{\proba}[1]{\mathbb{P}\left(#1\right)}
+\newcommand{\identity}[1]{\mat{I}}
+\newcommand{\e}[1]{\times 10^{#1}}
+
+\newcommand{\parfaite}[0]{\textsc{PaRFaItE}} %Name/Syntax of the Parfaite algorithm
+\newcommand{\newembLeft}{\textsc{Parfaite\_l}~}%Name/Syntax of the left embedding of Parfaite
+\newcommand{\newembRight}{\textsc{Parfaite\_r}~}%Name/Syntax of the right embedding of Parfaite
+
+\newtheorem{definition}{Definition}
+\newtheorem{property}{Property}
+\newtheorem{theorem}{Theorem}
+
+\begin{document}
+
+\include{Introduction}
+\include{Dynamic_Decision_Trees}
+\include{PPR_graph_embedding}
+\printbibliography
+
+\todo{Check consistent use of "s" or "z" for "zation" words (e.g. "Minimization")}
+\todo{Check footnotes after punctuation (except when refering to a specific word)}
+\todo{Explicit and ensure consistency of use of "prediction" or "decision" for the output of classification algorithms}
+\todo{Ensure consistency: "split condition"? "split criterion" => explicit that "condition" is used for binary trees}
+\todo{Explicit tree building = tree training}
+\todo{Unify a rule for indent (in latex: empty line) after Theorems-like environments}
+\todo{Indicate that all non-transposed vectors are column?}
+\todo{Clarify notations}
+\todo{Check "symmetrical" $\rightarrow$ "symmetric"}
+\todo{Check "they are" $\rightarrow$ "there are"}
+\todo{Add Acknowledgements to ANR funding}
+\todo{Unify "Parfaite" syntax (\textsc{PaRFaItE} ? )}
+\todo{All matrices and vectors should use the \\mat and \\vect commands}
+\todo{All probabilities should use the \\proba environment}
+\todo{Identity matrices should use the dedicated command}
+\end{document}

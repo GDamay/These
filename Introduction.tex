@@ -1,0 +1,434 @@
+\chapter{Background}
+\section{Dynamic Decision Trees}
+\subsection{The Classification problem} \label{subsec:intro_classification}
+In Machine Learning, the class of problems called \define{Supervised Learning} problems regroup those for which a set of objects called \define{training} objects is provided and an expected output value is known for each of these objects. The problem is then to create a model using these objects that would capture the underlying logic of the expected output so that, when applied to new objects for which the expected output is unknown, the model would generalize from the training objects to predict the output as best as possible. The prediction is sometimes called the \define{decision}. Two of the main problems in this class are Regression problems and Classification problems, and this thesis addresses the later.
+
+The \define{Classification problem} is a very common problem in machine learning. In this problem, the expected output for each object is a class, i.e. a group of objects that are similar to the input one. We focus on the case when the objects are points characterized each by a series of elements called \define{feature elements} (sometimes shorten to \define{features}). Each of these elements can only take its value from a set of admissible values, called the \define{domain}. The list of all the elements of an object is represented by a vector of dimension $k$.\footnote{All data that are considered in the part of this thesis related to Decision Trees can be injected onto the set $\realset$ without any loss of information. We therefore consider that we always work on vectors of $\realset^k$. However, the ordering of the domain values does not always make sense, and the relative order of two projected elements into the $\realset$ set should not always be considered as semantically meaningful. This matter is discussed with more details in section \ref{subsec:intro_dt_split_criteria}} The Cartesian product of the elements domains defines the domain of the vector, i.e. the set of possible values for the vector itself.
+%In this problem the objects are points characterized each by a vector of dimension $k$. The output of the algorithm for each point is a class of which the point is expected to belong to.
+\todo{Add examples of applications}
+
+\begin{definition} [Classification problem]
+    Let $C = \{c_1, \dots c_l\}$ be a set of classes. Let also $P = \{(p_1, b_1), \dots (p_n, b_n)\}$ be a training set with $(p_i, b_i) \in \realset^k \times C$ being a point and the associated label. Let finally $Q = \{(q_1, d_1) \dots (q_m, d_m)\}$ be a decision set defined similarly.
+    
+    It is assumed that each point $q_i$ is correlated with its class $d_i$ in the same way as the points in $P$ are correlated with their classes.
+
+    Then, the \define{Classification problem} consist in, using the training set $P$, building a function called \define{model} $M_P : \realset^k \rightarrow C$ so that the prediction $M_P(q_i)$ of the points of $i$ is mostly right.
+\end{definition}
+
+The notion of being "mostly right" is vague because several objective or evaluation metrics exist for evaluating the performance of a solution to this problem. This topic will be addressed with more details in section \ref{subsec:intro_class_metrics}.
+
+In this thesis, we study mainly the binary classification problem in which the points belong to one of two classes commonly called "positive" and "negative" classes, i.e. $|C| = 2$. In this thesis, the positive and negative classes will be noted respectively $+$ and $-$. \todo{Add examples: diagnostic?}
+
+\subsection{The Dynamic Classification problem}
+The \define{Dynamic Classification problem} is special case of Classification problem. In that case, the training set is updated sequentially by adding or removing points and the algorithm should update the model considering these insertions and deletions.\footnote{Some papers in the literature also consider the updating of points. In this thesis we consider the updating of a point as the removal of the outdated version and the insertion of the updated one. We do not study the specific optimizations that could be implemented for this specific case.} For this problem the complexity of updating the model is crucial since many applications use real-time streaming data for which the decision needs to be given after a reasonable delay.\todo{Examples}
+
+\begin{definition}[Dynamic Classification problem]
+Let $P_0 = \{(p_1, b_1), \dots (p_n, b_n)\}$ be an initial training set, and $U = \{((r_1, g_1), u_1) \dots ((r_T, g_T), u_T)\}$ be a set of updates with $(r_t, g_t)$ a point/class pair and $u_t \in \{\text{insert}, \text{delete}\}$ the type of update, indicating that at time $t$ the pair is respectively inserted in the training set or deleted. We note $P_t$ the set $P_0$ affected by the updates $((r_1, g_1), u_1), \dots ((r_t, g_t), u_t)$
+
+The \define{Dynamic Classification problem} consists in
+\begin{enumerate}
+    \item Building a model $M_{P_0}$ that addresses the Classification problem for $P_0$
+    \item For each $t \in [1, T]$, updating the model $M_{P_{t-1}}$ into a new model $M_{P_t}$ that addresses the Classification problem for $P_t$
+\end{enumerate}
+\end{definition}
+
+\subsection{Evaluating a Classification model}\label{subsec:intro_class_metrics}
+Many metrics have been proposed over the years for evaluating the model created by a Classification algorithm. Although the new proposal have been sparse in recent years, there is still some research on the specifics of each metric and the choice of the best one for a given problem (see for example \cite{Canbek2017_Class_metrics_terminology}). This subsection provides a quick overview of the most used of these metrics.
+
+As introduced in the subsection \ref{subsec:intro_classification}, a classification algorithm builds a model $M_P$ from a training set $P$ so that this model produces good predictions when applied to the decision set $Q$.
+
+The first measure that can be used is the so-called \define{training error}
+\begin{definition}[Training error ($TE$)]
+    The \define{training error} of a model $M_P$ is the number of points of $P$ that would be attributed to the wrong class by the model.
+    \begin{equation}
+        TE = |\{(p_i, b_i)\in P: M_P(p_i) \neq b_i\}|
+    \end{equation}
+\end{definition}
+
+Providing that $P$ does not contain two identical points associated with different classes, it is always possible to get an optimal training error of $0$. Trying to find a model that optimises the Training Error is called \define{Empirical Risk Minimization} (ERM) \cite{shalev-shwartz2014_UnderstandingMachineLearning}. However, models with an optimal training error are often not optimal because of the so-called \define{overfitting}: the model's primary goal is to correctly predict the data of the decision set $Q$, and a too high fitting to the training data often reduces its relevance when generalizing for the decision set.\todo{Cite (examples?)} It has been proven that the set of admissible models can be reduces \textit{a priori} (i.e. before the training phase) in a way that prevents the overfitting and hence makes ERM a good strategy for training and a good indicator of the quality of the model. This strategy is called \define{induction bias} \cite{shalev-shwartz2014_UnderstandingMachineLearning}.
+
+Most classification model building algorithms rely on trying to minimize the Training Error with induction bias. It is however difficult to assess the quality of the bias on which the prevention of the model overfitting is based. Methods have therefore been developed to assess the quality of the model using data that have not been used for the training of the model.
+
+The most common of these methods is to split the training set into two subsets. The model is trained only on the first one, that appropriates the name "training set", and the second one is called the \define{test set} and is used as a proxy decision set. We note $P$ the training set and $Q$ the test set. This setup allows the following definitions.\footnote{Note that we reuse the name "training set", as well as the notations $P$ and $Q$. This is because the model is trained solely on the new training set, making it very similar to the old definition, and the model does not train on the test set but simply outputs guesses about its point classes, making it very similar to the decision set.}
+
+\begin{definition}[True Positive ($TP$) and True Negative ($TN$)]
+In a binary classification problem, the True Positive and True Negative values are the number of points in the test set that are rightfully associated with respectively the positive and the negative class by the model.
+
+\begin{equation}
+    \begin{array}{ll}
+         TP & = |\{(q_i, d_i)\in Q: d_i = + \land M_P(q_i) = +\}| \\
+         TN & = |\{(q_i, d_i)\in Q: d_i = - \land M_P(q_i) = -\}|
+    \end{array}
+\end{equation}
+\end{definition}
+
+\begin{definition}[False Positive ($FP$) and False Negative ($FN$)]
+The False Positive and False Negative values are the number of points in the test set that are wrongfully attributed respectively to the positive and to the negative class by the model.
+\begin{equation}
+    \begin{array}{ll}
+         FP & = |\{(q_i, d_i)\in Q: d_i = - \land M_P(q_i) = +\}| \\
+         FN & = |\{(q_i, d_i)\in Q: d_i = + \land M_P(q_i) = -\}|
+    \end{array}
+\end{equation}
+\end{definition}
+
+These measures are raw unnormalized data, hence called "Base measures" by \cite{Canbek2017_Class_metrics_terminology}. Three metrics are directly derived from these.
+
+\begin{definition}[Precision, or confidence ($P$)]
+The \define{precision} of a model is the ratio of the points associated with the positive class that are indeed in this positive class.
+\begin{equation}
+    P = \frac{TP}{TP+FP}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Sensitivity or Recall ($TPR$), and Specificity ($TNR$)]\footnote{$TPR$ and $TNR$ stand respectively for "True Positive Ratio" and "True Negative Ratio".}
+    
+    The Sensitivity and the Specificity of a model are the fraction of points belonging respectively to the positive and to the negative class for which the model's prediction is correct.
+    \begin{equation}
+        \begin{array}{ll}
+             TPR & = \frac{TP}{TP+FN}  \\
+             TNR & = \frac{TN}{TN+FP}
+        \end{array}
+    \end{equation}
+\end{definition}
+
+All these metrics are normalised but they are complementary and none of them alone is sufficient to draw a complete picture of the model's performance. Therefore many metrics exist to aggregate them into a single value. In this thesis we only present the best known one called F1-score.
+
+\begin{definition}[F1-score]
+    The F1-score of a model is the harmonic mean of its precision and sensitivity
+    \begin{equation}
+        F_1 = 2\frac{P \cdot TPR}{P + TPR}
+    \end{equation}
+\end{definition}
+
+We note that this metric should be used with caution because it gives equal weight to the precision and recall, although the relative costs of false positive and false negative predictions varies greatly from one application to another. For example, if the model predicts serious diseases for which the cure is cheap and has few side effects, then a low number of false negative predictions meaning a high recall is expected, even at the cost of a high number of false positive predictions meaning a low precision.
+
+For this reason, variations of the F1-score exist called F$\beta$-scores that weights differently the precision and the sensitivity in the harmonic mean.
+
+For evaluating a Dynamic Classification model we need each point in the test set to be associated with a step of the updating process at which the class should be predicted. One way to build such a test set is to use each point of the update set for which the update type is "insert" both as a test point and as a training point. The "test" part, i.e the part that consists in predicting its class is preformed using the model as it is just before the "training" part, i.e. the insertion of the point. This method allows to train each model on all the points available at the time of the model, while never predicting the class of a point using a model that would have been trained on that very point.
+
+\subsection{Decision Trees generalities}
+One well-known algorithm for solving the Classification problem is the \define{Decision Tree} algorithm, and more specifically the \define{Classification Trees} algorithm, as a similar algorithm also called "Decision Tree" can be used for Regression problems. Since we focus on classification problems in this thesis the term "Decision Tree" will always be used for "Classification Trees" unless specified otherwise.
+
+\begin{definition}[Decision Tree]
+    A decision tree is a type of classification model built as a tree graph. The nodes of this graph are of two kinds:
+    \begin{description}
+        \item[Internal nodes] These nodes are characterized by a set of children nodes and a set of rules to deterministically direct any point to one of the children nodes,
+        \item[Leafs] These nodes are characterized by a class. Any point directed to a leaf will be predicted to belong to the class associated with it.
+    \end{description}
+    The class of a point is predicted by directing it from the root down to a leaf using the conditions at each node.\todo{Illustrate}
+    %The set of nodes is finite and the children graph contains no loop %(e.g. it is impossible from one node to find a path from this node to one of its children and so on, that would come back to the origin node)
+    %therefore each point is deterministically directed from any node to a leaf in finite time. A single node called the \define{root} is the child of no nodes, and the prediction for any point start from this point.
+\end{definition}
+
+
+
+%This algorithm can be illustrated as a Tree graph, hence the name. Each non-leaf vertex of the graph is associated with a condition so that the points of the training set are iteratively split between points that match the condition and points that don't. The resulting subsets at the leafs should then contain points of a same class, and it is possible to classify a new point by directing it down to a leaf using the condition at each node, and then attributing it the class of the points in the leaf.\todo{Maybe rephrase} \todo{Illustrate}
+
+Using trees of conditions to organise knowledge is a very intuitive thing to do and such trees were used long before the automation of their building for Data Sciences\todo{Find example: Darwin phylogenic tree?}. This automation arrived first in 1963 with the publication of the Automatic Interaction Detection (AID) algorithm for Regression Trees \cite{morgan1963_first_reg_tree}, quickly followed in 1972 by the THeta Automatic Interaction Detection (THAID) algorithm for Classification Trees \cite{Messenger1972_first_classification_tree}. For a more comprehensive history of decision trees in Data Science, see \cite{Loh2014_decision_trees_history}.
+
+The Decision Trees algorithms have since become some of the most popular algorithms for classification\todo{Add citation}. One of their main advantages is the clarity of the model they builds, of which decisions can be explained just by listing the conditions a point goes through to arrive to a leaf\todo{Add citation and/or example}
+
+The usual meta-algorithm for building Decision Trees sometimes called Hunt's algorithm \cite{Priyanka2020_decision_trees_survey} is described in algorithm \ref{alg:meta_decision_tree}\todo{Add reference, if possible surveys and else at least a few Tree building algorithms}. A Decision Tree is built recursively starting from the root with the full set of training points, by either making a leaf of the node or splitting its training set and building children from the subsets.
+At line \ref{alg_line:meta_decision_tree__leaf_class}, the class of a leaf is usually determined by the majority class in the subset of training points used for building the leaf. Therefore the main variation for Decision Tree building algorithms is the method used at line \ref{alg_line:meta_decision_tree__split_training_set} to establish the function to split the set of training points. The criteria used at line \ref{alg_line:meta_decision_tree__if_is_a_leaf} to decide whether a node should be a leaf are also an important parameter for Decision Tree building but it is mostly orthogonal with the splitting criterion and, as such, is usually studied in a literature of its own and not in the literature that presents new algorithms\todo{Cite}.
+
+\begin{algorithm}
+\caption{Hunt's recursive meta-algorithm for building a Decision Tree node}
+\label{alg:meta_decision_tree}
+\begin{algorithmic}[1]
+    \Require $S$ a set of training point, some context information (e.g. the depth of the tree to this node)
+    
+    \Comment{Note: To build a Decision Tree, this algorithm is run recursively, starting with the root and the full set of training points. The recursion is at line \ref{alg_line:meta_decision_tree__build_children}}
+    \If{this node should be a leaf\label{alg_line:meta_decision_tree__if_is_a_leaf}}
+        \State Determine the class of the leaf \label{alg_line:meta_decision_tree__leaf_class}
+    \Else
+        \State Determine $f$ a function that splits $S$ into $l$ subsets ($S_1, \dots S_l$), i.e associate each training point of $S$ with one of the $l$ subsets\label{alg_line:meta_decision_tree__split_training_set}
+        \For{$S_i \in \{S_1, \dots S_l\}$}
+            \State Build a child to this node using this algorithm, and $S_i$ as input\label{alg_line:meta_decision_tree__build_children}
+        \EndFor
+        \State Use $f$ as the condition to direct the points to predict  down the tree.
+    \EndIf
+\end{algorithmic}
+\end{algorithm}
+
+In this thesis, we will focus on binary trees, i.e. Decision Trees in which internal nodes have exactly 2 children each. In that case we call one of a children the \define{right child} and the other the \define{left child}. The splitting function $f$ can then be seen as a test that outputs a boolean and by convention points are directed in the right child if the output is \codetrue, and to the left child if it is \codefalse.
+
+Many Decision Tree building algorithm have a final step that consists in pruning the tree, i.e. reducing its size by turning some internal nodes into leafs and dropping the associated subtree. The methods we propose and study in this thesis do not feature this part and we therefore only mention it for completeness, but will not detail it further.\todo{Maybe redirect to a survey}
+
+\subsection{Split criteria for Decision Trees} \label{subsec:intro_dt_split_criteria}
+Before digging in the possible splitting criteria for the Decision Tree nodes, we need to distinguish two types of data that the vectors of the points can contain.
+\begin{definition}[Categorical and numerical data]
+    An element of the vector of a point is said to be \define{categorical} when its domain is finite and no well-ordering of the values in this domain can be established with sense.
+
+    An element is said to be \define{numerical} when the values in its domain do semantically accept a well-order.
+\end{definition}
+
+We note that the definition does not only requires the existence of a well-order, but also that this order should make sense. For example if the domain of a datum is Genre of Films it could accept a well-order as any finite set but this order would not make sense and hence the datum is categorical. Other examples of categorical data can be a town of origin, a language, a kind of food and so on. Examples of numerical data are heights, temperature, number of people and so on.
+
+In a Decision Tree the splitting criteria can rely either on categorical or on numerical data. In the case of categorical data, the splitting criterion is usually in the form of a pair $(i, C)$ with $i\in [1, k]$ and $C$ is a subset of the domain, and a point $p$ is directed to the right child if $p_i \in C$\todo{Find a way to distinguish indices of vectors and in vectors}. In the case of numerical data, the splitting criterion is usually in the form of a pair $(i, t) \in [1, k]\times \realset$ and a point $p$ is directed to the right child if $p_i \geq t$. In that case $t$ is called the \define{threshold}.
+
+The solution chosen to define and find efficiently the best splitting criterion is one of the main differences between Decision Trees algorithms. Let's introduce some of the most commonly used. In these definitions, we note $N_{P, c}$ the number of objects of a set $P$ that are associated with the class $c$.
+
+\begin{definition}[Gini index and Gini gain]
+    The \define{Gini index} of a set $P = \{(p_1, b_1), \dots (p_n, b_n)\}$ of objects $p_i$ associated with classes $b_i \in C = \{c_1, \dots c_l\}$ is the sum of the squared proportion objects in the set that belong to each class.
+    \begin{equation}
+        g(P) = 1 - \sum_{c \in C} \left(\frac{N_{P, c}}{n}\right)^2
+    \end{equation}
+    The \define{Gini gain} of a split of a set $P$ that produces two subsets $P_1$ and $P_2$ is the difference between the Gini index of $P$ and the weighted mean Gini index of $P_1$ and $P_2$
+    \begin{equation}
+        G(P, P_1, P_2) = g(P) - \left(\frac{|P_1|}{|P|} g(P_1) + \frac{|P_2|}{|P|} g(P_2)\right)
+    \end{equation}
+\end{definition}
+
+When the classification problem is binary (i.e. they are only two classes), the Gini index definition can be rewritten
+
+\begin{equation}
+    g(P) = 2 \frac{N_{P, +}}{n} \left(1 - \frac{N_{P, +}}{n}\right)
+\end{equation}
+
+The Gini index ranges from $0$ to $\frac{|C| - 1}{|C|}$, reaching $0$ when the set contains only objects of a single class and $\frac{|C| - 1}{|C|}$ when it contains the same number of objects of each class\todo{Should I give the demonstration (very easy by recurrence, probably already known for vectors}. When building a decision tree using this index, the goal will be to reduce as much as possible the weighted mean Gini index of the subsets of training points in leafs. Following the Hunt's algorithm, the chosen split of each node will be greedily chosen as the one that maximizes the Gini gain.
+
+\begin{definition}[Entropy and information gain]
+    The \define{entropy} of a set $P = \{(p_1, b_1), \dots (p_n, b_n)\}$ of objects $p_i$ associated with classes $b_i \in C = \{c_1, \dots c_l\}$ is defined by
+    \begin{equation}
+        E(P) = \sum_{c \in C : N_{P, c} \neq 0} -\frac{N_{P, c}}{n} \log_2 \left( \frac{N_{P, c}}{n} \right)
+    \end{equation}
+    The \define{information gain} of a split of a set $P$ that produces two subsets $P_1$ and $P_2$ is the difference between the entropy of $P$ and the weighted mean entropy of $P_1$ and $P_2$
+    \begin{equation}
+        IG(P, P_1, P_2) = E(P) - \left(\frac{|P_1|}{|P|} E(P_1) + \frac{|P_2|}{|P|} E(P_2)\right)
+    \end{equation}
+\end{definition}
+The entropy ranges from 0 to $\log_2(|C|)$, and these values are reached respectively when the set contains only one class and when each class is equally represented in the set.
+
+\subsection{Stopping criteria for Decision Tree building}
+The criteria used at line \ref{alg_line:meta_decision_tree__if_is_a_leaf} of algorithm \ref{alg:meta_decision_tree} to decide if a node should be a leaf are an important part of the building of Decision Trees. The most intuitive criterion is to make a leaf of a node when the subset of the node is totally homogeneous, i.e. all of its points are associated with the same class.
+
+The problem with this criterion is that it can result in either very deep trees, overfitting (see section \ref{subsec:intro_class_metrics} for a definition) or both. Very deep trees can be a problem for various reasons including extended computation times for the building and the predictions, and reduced interpretability \todo{cite article about interpretability measure}. 
+
+Three solutions to these problems are widely used, two of which aim to avoid overfitting while the third aims to reduce the depth, although solving one of the problem generally helps reducing the other.
+
+The solutions to avoid overfitting have in common that they add conditions for a split to be acceptable. If no acceptable split can be found due to these conditions, no child node is built and the node becomes a leaf.
+
+The first of these solutions is to prevent the split from containing less than a given number of training points. By ensuring that each subset of the tree represents a high enough number of training points, this solution reduces the possibility that variations due solely to noisy data would be considered in the model.
+
+The second solution to avoid overfitting is to make inadmissibles the splits that generate less than a given improvement of the objective function, e.g. the splits of which the Gini gain or information gain is below a given threshold. The reasoning behind this solution is that the improvement of the objective function is a proxy for the extent to which the split criterion is relevant to separate the classes. A low improvement would they imply a low relevance which could even correspond to noise.
+
+The solution to reduce the depth is to simply set as a parameter of the algorithm a maximal depth to which the tree can grow. If a node is to be built at the given maximal depth, it will automatically be a leaf. Not only does this solution prevent deep trees from being built, but by limiting the number of branching, it also prevents the breaking down of the space of the points into very small subspaces and thus limits the overfitting to some extend.
+
+\subsection{Random Forests}
+Random Forest algorithms part of the broader Machine Learning paradigm called "Ensemble learning"
+\begin{definition}[Ensemble learning paradigm]
+The Ensemble learning paradigm consists in training multiple different classification models and make final predictions by aggregating the predictions of the models.
+\end{definition}
+
+The method to aggregate the predictions of the models into a final prediction is called the \define{voting scheme} of the algorithm.
+
+Ensemble learning algorithms aim to reduce either the \define{variance} of one model i.e. its sensitivity to small variations of the input data, its inaccuracy or both by balancing it with the other models. The reasoning is that as long as errors are independent from one model to another, the aggregation of their predictions should contain less errors. In particular if the models are various enough the particular overfitting of any model should be leveled out by the aggregation.
+
+As part of this paradigm, the main idea of \define{Random Forest} algorithms is to build several Decision Trees by restraining the part of the training set each tree can train on and/or the part of the point features each can use in its split conditions. The prediction of such a forest for a new point is the majority decision of the trees.
+
+Random Forests were first introduced in 1995 in \cite{ho1995_RandomDecisionForests}. This work interests in the so-called \define{oblique decision tree} algorithm that is a binary decision tree building algorithm for numerical data for which the splitting condition is defined by a linear combination of the features and a threshold, and a point is directed to the right child of a node of the tree if the given linear combination of its features is over the threshold. In the Random Forests paper, the concept of oblique decision tree is improved by building several trees, each tree being allowed to use only a small sample of the features in its split conditions. This sampling of features for each tree has since been used to build Random Forests even using regular decision trees that only split along one feature at a time.
+
+In 1996 was introduced the \define{bagging} technique in \cite{breiman1996_BaggingPredictors}. Although the paper did not identify this method as Random Forest building, it has since become one of the cornerstones for this class of algorithms.
+
+\begin{definition}[Bagging]
+    The \define{bagging} technique for building a Random Forest consists in generating several training sets from the original one by sampling its points with replacement. Each tree of the forest is then trained on one of these new training sets.
+\end{definition}
+
+Finally in 2001 \cite{breiman2001_RandomForests} mixed bagging with the sampling of features to create the foundation of the Random Forests models as they are generally used and studied nowadays.
+
+\section{PageRank and graph embedding}
+
+\subsection{Graph generalities}
+\define{Graphs} are a range of mathematical objects use to study the relations between entities. The simplest graphs are defined by two sets $V$ and $E$. 
+
+$V$ is a countable set of objects called \define{vertices} or \define{nodes}. These objects can be of any type but it is common to inject this set into the natural numbers set so that each vertex receives a unique identifier.
+$E \subset V\times V$ \footnote{This notation implies that each pair of vertices can be connected by at most one edge. Unless specified otherwise, this is generally assumed to be true.} is a set of pairs of vertices, each of these pair being called an \define{edge}.
+When graphs are used in practical applications vertices can correspond to any type of entity, while edges reflect relations or links between a pair of these entities. A graph is called \define{undirected} if the edges are not directed, i.e. the existence of an edge $(u, v) \in E$ symbolises a symmetric relation between vertices $u$ and $v$. In that sense we can consider that for undirected graph $(u, v) = (v, u)$. On the opposite a graph is called \define{directed} if the edge $(u,v) \in E$ symbolises a directed relation from $u$ to $v$ and does not imply any similar relation from $v$ to $u$.\todo{Give examples}
+
+In practical use and especially when the number of vertices is very large the graphs are often called \define{networks}. From a mathematical point of view however the words "graph" and "network" are synonyms.
+
+\begin{definition}[Order and size of a graph]
+    The order $n$ of a graph is its number of vertices $n = |V|$.
+
+    The size $m$ of a graph is its number of edges $m = |E|$
+\end{definition}
+
+If loops are impossible, i.e. edges from one vertex to itself, the graph of order $n$ with the maximum size is the graph called the \define{$n$-clique} whose pairs of vertices are all in the edge set. Its order is then $m = n(n-1)$ for directed graphs and $m=\frac{n(n-1)}{2}$ for undirected graphs. The \define{density} of a graph is the ratio of its size to this maximum size. A graph with low density is said to be \define{sparse}, and most real-world graphs are sparse.
+
+\begin{definition}[Weighted graph]
+    A weighted graph is a graph defined with an extra set $W \in \realset^m$ that defines for each edge a weight
+\end{definition}
+
+The weight of an edge generally reflect the strength of the link or connection between the vertices.
+
+
+The simplest way to represent a graph is to give its order and, using $V = [0, n-1]$, listing its edges. However in many cases it is convenient to represent it in the form of the so-called \define{adjacency matrix}\todo{give an example}.
+
+\begin{definition}[Adjacency matrix]
+    The adjacency matrix of a graph is the matrix $A \in \realset^{n\times n}$ defined by
+    $$
+    a_{ij} = \begin{cases}
+        1 & \text{if $(i, j) \in E$}\\
+        0 & \text{else}
+    \end{cases}$$
+\end{definition}
+
+We note that for undirected graph the matrix is symmetric. In the case of weighted graphs, the element of the matrix corresponding to any given edge is the weight of this edge instead of $1$.
+
+Another important notion is that of \define{neighbors} of a vertex.
+\begin{definition}[Neighbors]
+    In a graph $G = \{V, E\}$, the set $\mathcal{N}(u)$ of \define{neighbors} of a vertex $u$ is the set of vertices that share an edge with $u$.
+    \begin{equation}
+        \mathcal{N}(u) = \{v\in V : (u, v) \in E \vee (v, u) \in E\}
+    \end{equation}
+
+    In the case of directed graphs, we define the sets $\mathcal{N}^-(u)$ of \define{out-neighbors} and $\mathcal{N}^+(u)$ of \define{in-neighbors} of $u$ as the sets of nodes so that there is respectively an edge coming from $u$ to them, and going from them to $u$.
+
+    \begin{equation}
+        \begin{array}{ll}
+            \mathcal{N}^-(u) & = \{v\in V : (u, v) \in E\} \\
+            \mathcal{N}^+(u) & = \{v\in V : (v, u) \in E\}
+        \end{array}
+    \end{equation}
+\end{definition}
+
+\subsection{The centrality problem}\label{subsec:Intro_centrality}
+A common problem on graphs called the \define{centrality problem} is to determine how each vertex is central in the graph. This notion of centrality can be defined in various manners that will affect the metric that will be used to compute it.
+
+The main application of the centrality metrics is to find out which nodes are the most important or influential in a network. For example the PageRank algorithm that we use extensively in this thesis was first developed to rank the relative importance of web pages as answers to a Google search \cite{pagerank}.
+
+Many centrality metrics rely on paths and distances in the graph. We first defined these notions. A path is a series of adjacent edges leading from one vertex to another.
+\begin{definition}[Path]
+    In a graph $G = \{V, E\}$, a path $P$ from $u^*$ to $v^*$, with $u^*, v^* \in V$ is a sequence of edges $P = \{(u_i, v_i) \in V: i\in [0, |P|)\}$ so that $u_0 = u^*$, $v_{|P|} = v^*$ and $\forall i \in [0, |P|-1)$ , we have $v_i = u_i$.
+\end{definition}
+
+\begin{definition}[Distance between vertices]
+    The distance $d(u, v)$ between two vertices $u, v \in V$ is the length of the shortest path from $u$ to $v$. By convention the distance between two vertices between which no path exist is defined as $+\infty$. 
+
+    Any path from $u$ to $v$ of size equal to the distance between them is called a \define{geodesic}.
+\end{definition}
+
+We present a brief history of the centrality metrics and an introduction to some of the main ones used in the literature.
+
+One of the first paper to talk about centrality was \cite{bavelas1950_firstCentrality} published in 1950. This paper was very application-oriented as it mainly studied the structures of collaboration for conduction tasks in groups but these structures were modeled as graphs and it prompted the authors to propose a metric for centrality that is now known as \define{closeness centrality}.
+\begin{definition}[Closeness centrality]
+    In a graph $G = \{V, E\}$, the closeness centrality $C_C(u)$ of a vertex $u\in V$ is defined as
+    \begin{equation}
+        C_C(u) = \frac{1}{\sum_{v\in V} d(u, v)}
+    \end{equation}
+\end{definition}
+
+Various variations of the numerator have been proposed to normalize the metric. One of the drawbacks of this metric is that it only works for connected graphs, i.e. graphs in which there exists a path between any pair of nodes, since the distance between two unconnected points is $+\infty$.
+
+Shortly after in 1953 was introduced the Katz centrality index \cite{katz1953_NewStatusIndex} which is one of the most popular centrality metrics up to this date.
+
+\begin{definition}[Katz centrality index]
+    In a graph $G = \{V, E\}$, the \define{Katz Centrality Index} of parameter $\alpha \in [0, 1)$ of a vertex $u \in V$ is
+    \begin{equation}
+        C_{\text{Katz}}(u) = \sum_{k=1}^{+\infty} \sum_{v\in V} \alpha^k (A^k)_{uv}
+    \end{equation}
+\end{definition}
+
+For unweighted graphs, the elements in the matrix $A^k$ are the number of distinct paths from one vertex to another. The sum $\sum_{v\in V} (A^k)_{uv}$ is therefore the number of distinct paths starting at $u$ and of length $k$ that can be found in the graph. The Katz Centrality index is the pondered sum of this number for each value of $k$, the longest paths having a lower importance in the sum.
+
+We note that $\alpha$ needs to be smaller than the inverse of the maximum eigenvalue of $A$ to ensure the convergence of the series.
+
+In 1972 Bonacich \cite{bonacich1972_eigenvect_centrality} proposed the eigenvector centrality.
+\begin{definition}[Eigenvector centrality]
+    The eigenvector centrality vector $x$ of a graph $G$ is the largest eigenvector of the adjacency matrix.
+    
+\begin{equation}
+    \begin{cases}
+        \exists \lambda \in \realset : Ax = \lambda x \\
+        \forall \lambda^* \in \realset, x^* \in \realset^n : Ax^* = \lambda^* x^* \Rightarrow \lambda^* \leq \lambda
+    \end{cases}
+\end{equation}
+    The eigenvector centrality of a given vertex is the value of the element of the vector $x$ associated with this vertex.
+\end{definition}
+
+
+A property of this metric is that $\forall u \in V : \lambda x_u = \sum_{v \in V} a_{uv} x_v$. In other words, the eigenvector centrality of a vertex is high when the eigenvector centrality of its neighbors is high.
+
+It has been shown \cite{bonacich2007_UniquePropertiesEigenvector} that eigenvector centrality is related to Katz centrality, the later approximating the former when  $\alpha \to \frac{1}{\lambda}$
+
+In 1977, another centrality metric that is still widely used today was introduced in \cite{freeman1977_BetweennessCentrality}. This metric called \define{Betweenness Centrality} relies on the geodesics of the graph and, to define it, we introduce the notations $\sigma_{uv}$ which is the number of geodesics from vertex $u$ to vertex $v$ and $\sigma_{uv}(w)$ the number of geodesics from $u$ to $v$ that contain $w$.
+
+\begin{definition}[Betweenness Centrality]
+    In a graph $G = \{V, E\}$, the Betweenness Centrality of a vertex $w$ is the sum for each pair of vertices of the ratio of geodesics between these vertices that contain $w$
+    \begin{equation}
+        C_B(w) = \sum_{u,v \in V\times V : u\neq v \neq w} \frac{\sigma_{uv}(w)}{\sigma_{uv}}
+    \end{equation}
+\end{definition}
+
+When the graph is undirected this value needs to be divided by $2$ to account for the fact that each pair of vertices is counted twice.
+
+The value $\frac{\sigma_{uv}(w)}{\sigma_{uv}}$ equals $0$ when $w$ no shortest path from $u$ to $v$ contains $w$ and $1$ when all the shortest paths do (e.g. when there is only one shortest path from $u$ to $v$). In that sense, the Betweenness Centrality of $w$ is the number of pairs of vertices that the removal of $w$ would spread apart, but it also considers the cases when $w$ is on some of the geodesics between two vertices but not all. The interpretation of the authors is that the Betweenness Centrality of a vertex is a metric of the control it has on information passing in the graph.
+
+Finally in 1999, the centrality metric that interests us the most in this thesis, PageRank, was introduced in a very famous paper \cite{pagerank}.
+
+To define PageRank, we first need to introduce the random walk it is based on. Let's imagine a walker on the graph, i.e. any entity that can use the edges to go from one vertex to another. When the walker is on a given vertex, there is an equal probability that he uses any of the edges starting from that vertex.\footnote{In the case of weighted graphs another version is to give each vertex a probability proportional to its weight.}
+
+We note $D \in \realset^{n\times n}$ the diagonal matrix of out-degrees of the graph, i.e. the matrix of which each diagonal element is the number of edges starting from the related vertex. We can then define $M = D^{-1} A$ the stochastic matrix of the random walk, i.e. $m_{uv}$ is the probability that the walker will go to vertex $v$ on the next step given that it is on vertex $u$ at this step.
+
+Finally we define a random walk with restart of parameter $\alpha$ as a random walk in which, at each step the walker has a probability $\alpha$ to jump on a random vertex of the graph instead of following an edge. The probability distribution of the vertex it jumps to is the same as the probability distribution of the vertex it started from.\todo{Simplify by stating that he jumps uniformly and precising later?}
+
+\begin{definition}[PageRank score]
+    In a graph $G = \{V, E\}$, the PageRank score $\pi_u$ of a vertex $u\in V$ with parameter $\alpha$ is the asymptotic probability of being on the vertex $u$ at a step of the random walk with restart of parameter $\alpha$
+
+    \begin{equation}
+        \pi_u = \frac{\alpha}{n} \sum_{i=0}^{+\infty} \sum_{v \in V} (1-\alpha)^i (M^i)_{uv}
+    \end{equation}
+\end{definition}
+
+Some of these centrality metrics exist in \define{personalized} \todo{Add citation to history/first version?} version, i.e. metrics for the importance of each vertices in relation to a given subset $W$ of vertices instead of the whole graph. This is particularly true for the Katz and PageRank metrics. For Katz, the personalized version can be obtained by computing the sum over the given subset of vertices instead of all the vertices in the graph.
+\begin{equation}
+    P_{\text{Katz}}(W, u) = \sum_{k= 1}^{+\infty}\sum_{v\in W} \alpha^k (A^k)_{uv}
+\end{equation}
+
+For PageRank, the personalized version consists in reducing the start and restart set of vertices of the random walk to the given subset. Mathematically this has the same impact to sum only over on the given subset, only also affecting the normalization.
+
+\begin{equation}
+    P_{\text{PageRank}}(W, u) = \frac{\alpha}{|W|} \sum_{i=0}^{+\infty} \sum_{v \in W} (1-\alpha)^i (M^i)_{uv}
+\end{equation}
+
+When the subset is reduced to a single vertex, the metric is either called a personalized version or the rooted version of the metric. In this thesis, unless specified otherwise we will use the term "\define{Personalized PageRank}" (PPR) for this rooted version because it is the one that most interests us and it is easy to see that personalized version with bigger subsets are just linear combinations of these.
+
+\subsection{Singular Value Decomposition}
+The \define{Singular Value Decomposition} (SVD) is a method of matrix factorization.
+\begin{definition}
+    The \define{Singular Value Decomposition} of a matrix $M \in \realset^{m\times n}$ is a group of a rectangular diagonal matrix $\Sigma \in \realset^{m \times n}$ and two unitary matrices $U \in \realset^{m\times m}$ and $V \in \realset^{n\times n}$ so that
+    \begin{equation}
+        M = U\Sigma V^\top
+    \end{equation}
+\end{definition}
+A matrix $U$ is said to be \define{unitary} if $U^\top U = I$ the identity matrix.
+
+We can assume that $m \leq n$. This assumption is made without loss of generality since the transposed matrix can be used when the assumption is false.
+
+The columns $\{u_1,\dots u_m\}$ and $\{v_1, \dots v_m\}$ of the matrices $U$ and $V$ are called respectively the \define{left and right singular vectors} of the matrix, and the diagonal elements $\{\sigma_1, \dots, \sigma_m\}$ of $\Sigma$ are called the \define{singular values}. For a given index $i$, the triplet $\{\sigma_i, u_i, v_i\}$ is called a singular triplet. The equation in the SVD decomposition can be rewritten as a combination of singular triplets
+\begin{equation}\label{eq:svd_developped}
+    M = \sum_{i=1}^m \sigma_i u_i v_i^\top
+\end{equation}
+
+The SVD is massively used in Data Science for reducing the dimensions of data by removing redundancy and keeping only the most influential features. In that case the lines of the matrix are usually the samples while the columns are the features. We can see from equation \ref{eq:svd_developped} that if the values $\sigma_i$ are indexed in decreasing order, then the matrix $M$ can be approached by a limited number $k$ of them
+\begin{equation}\label{eq:svd_trunc_developped}
+    M \approx \sum_{i=1}^k \sigma_i u_i v_i^\top
+\end{equation}
+This equation is sometimes written in its matrix form
+\begin{equation}
+    M \approx U_k\Sigma_k V_k^\top
+\end{equation}
+where $U_k$ and $V_k$ are made of the first $k$ columns of $U$ and $V$, and $\Sigma_k$ is $\Sigma$ reduced to a $k\times k$ square matrix.
+
+This technique is called \define{truncated SVD}. It has been proven\todo{cite} that this approximation is the best possible of order $k$, meaning that there is no set of $k$ triplets $\{\sigma_i, u_i, v_i\}$ that would result in a better approximation in equation \ref{eq:svd_trunc_developped}. When applied to a matrix of data of which the features are centered, it is equivalent to the well-known Principal Components Analysis.
+
+When applied to a matrix of data with each line representing a sample and each column a feature, the right singular vectors associated with the highest singular values represent the "patterns" of features that have the highest importance to represent the data, i.e. linear combination of the features that can be multiplied by constants to approximate the data at best. The left singular vectors multiplied by the singular values are these constants, i.e. the importance of each right singular vector to represent the data.
+
+\subsection{Graph Embedding}\label{subsec:intro_graph_embedding}
+The Data Mining technique of \define{Embedding}\todo{Add short history?} consists in simplifying the study of complex objects by representing them into a low-dimensional vectorial space. For example in Natural Language Processing, the word embedding technique consists in representing each word of a corpus in a vectorial space so that words from a same lexicon are close together.
+
+In graph mining, the objects that are embedded can be either vertices, edges or the entire graph. In this thesis we focus on the case of vertices. This technique can be applied for solving various problems as node recommendation, link prediction or node classification. For all these problems there exist algorithms running directly on graphs that can solve them but it is not always possible to use other external data. On the top of that these algorithms being developed specially for graphs they do not benefit from an attention as strong as similar algorithms for vectorial data, a problem solved by the embedding. Finally the embedding, although often computationally costly, can be computed only once and then be used to tackle several problems. \todo{Talk about node2vec?}
+
+The name "\define{graph embedding}" can stand either for the embedding of the whole graph as one vector or for the embedding of the components of the graph, either the vertices, the edges or both as multiple vectors, one for each component. In this thesis we are interested in the embedding of vertices and unless specified otherwise, we will always use the name "graph embedding" in its "vertices embedding" meaning.
+
