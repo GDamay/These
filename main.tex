@@ -1,4 +1,47 @@
-\documentclass[a4paper]{book}
+%%% Headers from template
+\documentclass[a4paper, 12pt]{book}
+\usepackage[a4paper,top=3.5cm,bottom=3.5cm,left=3.3cm,right=3.3cm,marginparwidth=1.75cm]{geometry}
+\usepackage[absolute,overlay]{textpos}
+\usepackage{graphicx}
+\usepackage{lipsum}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{multicol}
+\usepackage{afterpage}
+\usepackage{pgffor}
+\setlength{\columnseprule}{0pt}
+\setlength\columnsep{10pt}
+\usepackage{microtype}
+
+\usepackage{framed}
+
+\usepackage{amssymb}
+\usepackage{textcomp}
+\usepackage{balance}
+\usepackage{palatino}
+\usepackage{soul}
+\usepackage{url}
+\usepackage{xspace}
+\usepackage{stmaryrd}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{footnote}
+\usepackage{color}
+\usepackage{nicefrac}
+\usepackage{numprint}
+
+\usepackage{minitoc}
+\usepackage{titlesec}
+\usepackage[hang]{footmisc}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage[Lenny]{fncychap}
+\makesavenoteenv{tabular}
+\makesavenoteenv{table}
+
+\definecolor{c1}{HTML}{ed1941}
+\definecolor{c2}{HTML}{2485a6}
+
 
 %%% Encoding packages
 \usepackage[utf8]{inputenc}
@@ -15,9 +58,13 @@
 
 \usepackage[caption=false,font=footnotesize]{subfig} %subfloats
 
+\usepackage{xcolor} % For red text in TODO
+
 %To write algorithms ("algorithm" environment)
 \usepackage{algorithm}
 \usepackage[italicComments=true, noEnd=false]{algpseudocodex}
+
+\usepackage{cover}
 
 \usepackage{biblatex} % For bibliography
 \addbibresource{Bibliography/Classification.bib}
@@ -28,6 +75,8 @@
 \addbibresource{Bibliography/datasets.bib}
 \addbibresource{Bibliography/Interpretability.bib}
 \addbibresource{Bibliography/misc.bib}
+\addbibresource{Bibliography/misc_dynamic.bib}
+\addbibresource{Bibliography/general.bib}
 
 % \usepackage{helvet} %Style package
 % \renewcommand{\familydefault}{\sfdefault} %Style package
@@ -39,7 +88,6 @@
 % 	right=16mm,
 % 	bottom=30mm
 % }
-\usepackage{xcolor} % For red text in TODO
 
 \renewcommand\descriptionlabel[1]{$\bullet$ \textbf{#1}} % Style : add bullet before description (dictionnaries) labels
 
@@ -64,15 +112,20 @@
 \newcommand{\identity}[1]{\mat{I}}
 \newcommand{\e}[1]{\times 10^{#1}}
 
-\newcommand{\parfaite}[0]{\textsc{PaRFaItE}} %Name/Syntax of the Parfaite algorithm
+\newcommand{\parfaite}[0]{\textsc{PaRFaItE} } %Name/Syntax of the Parfaite algorithm
 \newcommand{\newembLeft}{\textsc{Parfaite\_l}~}%Name/Syntax of the left embedding of Parfaite
 \newcommand{\newembRight}{\textsc{Parfaite\_r}~}%Name/Syntax of the right embedding of Parfaite
 
 \newtheorem{definition}{Definition}
 \newtheorem{property}{Property}
 \newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+
+\input{macros_ieee}
 
 \begin{document}
+
+\diplayFirstPage
 
 \include{Introduction}
 \include{Dynamic_Decision_Trees}
@@ -94,4 +147,8 @@
 \todo{All matrices and vectors should use the \\mat and \\vect commands}
 \todo{All probabilities should use the \\proba environment}
 \todo{Identity matrices should use the dedicated command}
+\todo{For old ref of the article, check that the ref is as good, or complete}
+\todo{Check that we put the complete array of results, not the partial ones}
+\todo{Check consistancy of BCI/CCI results promised and shown}
+\diplayLastPage
 \end{document}

@@ -170,7 +170,7 @@ In a Decision Tree the splitting criteria can rely either on categorical or on n
 The solution chosen to define and find efficiently the best splitting criterion is one of the main differences between Decision Trees algorithms. Let's introduce some of the most commonly used. In these definitions, we note $N_{P, c}$ the number of objects of a set $P$ that are associated with the class $c$.
 
 \begin{definition}[Gini index and Gini gain]
-    The \define{Gini index} of a set $P = \{(p_1, b_1), \dots (p_n, b_n)\}$ of objects $p_i$ associated with classes $b_i \in C = \{c_1, \dots c_l\}$ is the sum of the squared proportion objects in the set that belong to each class.
+    The \define{Gini index} of a set $P = \{(p_1, b_1), \dots\allowbreak (p_n, b_n)\}$ of objects $p_i$ associated with classes $b_i \in C = \{c_1, \dots c_l\}$ is the sum of the squared proportion objects in the set that belong to each class.
     \begin{equation}
         g(P) = 1 - \sum_{c \in C} \left(\frac{N_{P, c}}{n}\right)^2
     \end{equation}
@@ -189,7 +189,7 @@ When the classification problem is binary (i.e. they are only two classes), the 
 The Gini index ranges from $0$ to $\frac{|C| - 1}{|C|}$, reaching $0$ when the set contains only objects of a single class and $\frac{|C| - 1}{|C|}$ when it contains the same number of objects of each class\todo{Should I give the demonstration (very easy by recurrence, probably already known for vectors}. When building a decision tree using this index, the goal will be to reduce as much as possible the weighted mean Gini index of the subsets of training points in leafs. Following the Hunt's algorithm, the chosen split of each node will be greedily chosen as the one that maximizes the Gini gain.
 
 \begin{definition}[Entropy and information gain]
-    The \define{entropy} of a set $P = \{(p_1, b_1), \dots (p_n, b_n)\}$ of objects $p_i$ associated with classes $b_i \in C = \{c_1, \dots c_l\}$ is defined by
+    The \define{entropy} of a set $P = \{(p_1, b_1),\allowbreak\dots (p_n, b_n)\}$ of objects $p_i$ associated with classes $b_i \in C = \{c_1, \dots c_l\}$ is defined by
     \begin{equation}
         E(P) = \sum_{c \in C : N_{P, c} \neq 0} -\frac{N_{P, c}}{n} \log_2 \left( \frac{N_{P, c}}{n} \right)
     \end{equation}
