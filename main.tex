@@ -1,5 +1,5 @@
 %%% Headers from template
-\documentclass[a4paper, 12pt]{book}
+\documentclass[a4paper, 12pt, openright]{book}
 \usepackage[a4paper,top=3.5cm,bottom=3.5cm,left=3.3cm,right=3.3cm,marginparwidth=1.75cm]{geometry}
 \usepackage[absolute,overlay]{textpos}
 \usepackage{graphicx}
@@ -96,7 +96,7 @@
 \textcolor{red}{\footnote{\textcolor{red}{TODO: #1}}}}
 % Encapsulate formating of terms that are defined in the sentence
 % e.g. "An \define{apple} is a fruit"
-\newcommand{\define}[1]{\textit{#1}}
+\newcommand{\define}[1]{\textbf{#1}}
 
 \newcommand{\codetrue}[0]{\texttt{true}}
 \newcommand{\codefalse}[0]{\texttt{false}}
@@ -150,5 +150,7 @@
 \todo{For old ref of the article, check that the ref is as good, or complete}
 \todo{Check that we put the complete array of results, not the partial ones}
 \todo{Check consistancy of BCI/CCI results promised and shown}
+\todo{Check that odd-numbered pages are on the right (i.e. the last roman numbering is even or there is a blank page}
+\todo{Check consistant use of the \\define environment}
 \diplayLastPage
 \end{document}

@@ -1,51 +1,121 @@
 \chapter{Dynamic Decision Trees}
 \section{Introduction}
-Decision trees are a cornerstone of machine learning, and an essential tool in any machine learning library. Decision-tree-based algorithms such as random forests, XGBoost, are widely used to solve real-world machine learning problems, while they are consistently used by winners of data challenges~\cite{kaggle}. They also boast the appealing feature of being explainable.
+Decision trees are a cornerstone of machine learning, and an essential tool in any machine learning library. Decision-tree-based algorithms such as random forests or XGBoost, are widely used to solve real-world machine learning problems. They also boast the appealing feature of being explainable\todo{Add ref to papers about explainability of DT}.
+As many other machine learning problems, the classification problem has a \define{dynamic} version, as explained in section \ref{subsec:dynamic_intro}. In that version the training dataset evolves with time by inserting and deleting data points. The dynamic classification problem is called \define{fully-dynamic} if insertions and deletions are permitted, and \define{online} or \define{incremental} if only the former applies.
 
-\subsection{Definitions and Notations}
-We denote the feature and label domains respectively by $\scX$ and $\scY$; by default $\scX=\R^d$ and $\scY=\{0,1\}$. We denote by $(x,y) \in \scX \times \scY$ a labeled example, by $x_j$ the value of its $j$-th feature, and by $S$ a multiset of labeled examples. We may treat $S$ as a sequence; this will be clear from the context. We assume examples can be stored in $\scO(d)$ bits, while the $x_j$'s can be accessed in time $\scO(1)$.
-We let $S[\ldots]$ be the subset of $S$ matching a condition; e.g. $S[x_j \le t] = \{(x,y) \in S : x_j \le t\}$. A \emph{split} is a pair $(j,t) \in [d] \times \R$. We use the bold font for vectors (e.g.  $\bx$). We use Gini gain defined in section \ref{subsec:intro_dt_split_criteria} to measure split quality.
-% \begin{definition}\label{def:gini}
-% The Gini index of $S$ is $g(S) = 2\, p_S (1-p_S)$, where $p_S = \frac{1}{|S|} \sum_{(x,y) \in S} y$. The Gini gain of $(j,t)$ on $S$ is:
-% \begin{align}
-% G(S,j,t) = g(S) - \left(\frac{|S_-|}{|S|} g(S_-) + \frac{|S_+|}{|S|} g(S_+)\right)
-% \end{align}
-% where $S_-=S[x_j \le t]$ and $S_+=S[x_j > t]$. When $|S|=0$ we define $g(S)=0$ and $G(S,j,t)=0$ for all $(j,t) \in [d] \times \R$.
-% \end{definition}
-% %When $\scX = \{0,1\}$ we let $S_j^-=S[x_j = 0]$ and $S_j^+=S[x_j = 1]$.
-% For all $j \in [d]$ let $G(S,j) = \max_{t\in \R} G(S,j,t)$. Hence, $\argmax_{j}G(S,j)$ is a feature with maximum Gini gain over $S$. Finally, we let $G(S)=\max_{j \in [d]} G(S,j)$.
+In the online version, there is an additional difficulty called \define{concept drift}. Is that case, the underlying model that make data belong to one class or another change with time so that the relevance of the data is maximal at the time when they are inserted and slowly decay as new points are inserted. Thus if the model is updated by considering each data equally, its accuracy will be sharply reduced. If the algorithm used to build the model can handle the fully-dynamic problem, then it is possible to handle the concept drift by working on a window of data, i.e. setting a constant $t$ and only working on the last $t$ inserted data, deleting the oldest data each time a new one is inserted. There are however algorithms built specifically for the online problem that can handle concept drift.
+
+Many variants of the Decision Tree method exist to deal with the online problem. However, to the best of our knowledge the only variant compatible with the fully-dynamic problem is BOAT\todo{Add citation}. This method however was not specifically designed for this task\todo{Add ref to discussion?}.
+
+This chapter presents a new fully-dynamic decision tree building algorithm. We first review the literature related to online decision trees. The Gini gain theorem and a new target for fully-dynamic decision trees in then described, before detailing the algorithm. The following two sections present the theoretical and experimental results of our algorithms. Finally we discuss the findings and we conclude.
 
 \subsection{Our contributions}
 \subsection{Organisation of the chapter}
+\subsection{Acknowledgements}
 
-\section{Dynamic Machine Learning}
-
-A fully-dynamic decision tree algorithm $\scA$ is defined as follows. The input of $\scA$ is an  \emph{update sequence} $U$ of requests of three types: insertion, $\ins(x,y)$; deletion, $\del(x,y)$; labeling, $\lab(x)$. Each such sequence $U$ induces an \emph{active multiset} of labeled examples $S$ obtained by inserting/deleting the examples following the order of the sequence.
-Suppose $\scA$ has processed an update sequence $U$. We say $\scA$ is \emph{coherent} with a decision tree $T$ if, for every $x \in \scX$, any further request $\lab(x)$ makes $\scA$ output $T(x)$. The \emph{query time} of $\scA$ is the worst-case time it takes to $\scA$ to output $T(x)$. Our goal is to construct a fully dynamic algorithm $\scA$ that has low query time and, at every point in time, is coherent with a decision tree $T$ that is $\beps$-feasible with respect to the current active set $S$ (see below).
-
-Recently, there have been significant efforts to adapt machine learning algorithms into a fully dynamic environment, where the algorithm is asked to process an arbitrary list of insertions or deletions. Insertions are typically the result of new data being collected or revealed, while deletions can be the result of noise removal, removal of personal data for privacy concerns,  data becoming obsolete, etc. Most efforts in developing fully machine learning algorithms have focused on unsupervised tasks, such as clustering~\cite{Cohen-Addad2019_FullyDynamicConsistent, Henzinger2020_FullyDynamicCoresets, Bateni2021_OptimalFullyDynamic, Chan2018_FullyDynamicKCenter}, and graph mining~\cite{Bhattacharya2015_SpaceAndTimeEfficientAlgorithm, Epasto2015_EfficientDensestSubgraph, DeStefani2017_TRIESTCountingLocal}.
-\subsection{Online decision trees}
+\section{Online decision trees: A brief review of the literature}
+\todo{Redact this part}
  There is a rich literature for online decision tree algorithms (see~\cite{Manapragada2022_AnEagerSplitting} for a survey).
 \begin{itemize}
     \item \cite{Domingos2000_HighSpeedStreams,Domingos2001_MiningTimeSeries,Gama2003_HighSpeedStreams,Jin2003_EfficientDecisionTree,Rutkowski2013_DecisionTreesForMining}: classic papers using concentration bounds to build near-optimal trees over streams
     \item \cite{Manapragada2018_EFDT}: introduces the Hoeffding Anytime Tree and its implementation EFDT (Extremely Fast Decision Tree)
     \item \cite{Das2019_LearnSmartWithLess}: improves on VFDT's conservativeness via statistical resampling
    \item \cite{sun2020_SpeedingUpVeryFast}: improves on VFDT by heuristically reducing the attempts and/or time to split 
-   \item \cite{Barddal20}: adds regularization to EFDT and others, to avoid too large trees
+   \item \cite{Barddal2020_RegularizedAndIncremental}: adds regularization to EFDT and others, to avoid too large trees
    \item \cite{Manapragada2022_AnEagerSplitting}: thorough study of the Hoeffding AnyTime Tree (EFDT) in ensemble setting, uses ``the largest and most comprehensive set of testbenches in the online learning literature''
    \item \cite{Haug2022_DynamicModelTree}: some other method called ``Dynamic Model Tree'' which is claimed to outperform previous methods
-\end{itemize}\todo{Rephrase that whole section}
+\end{itemize}
 
-\section{Properties of the Gini gain}
-We rely on the following smoothness properties of the Gini index and the Gini gain. Given two multisets/sequences $S,S'$, their edit distance $\ED(S,S')$ is the minimum number of insertions and deletions to obtain $S'$ from $S$, and their relative edit distance is $\EDR(S,S') = \frac{\ED(S,S')}{\max(|S|,|S'|)}$. 
-\begin{lemma}
-\label{lem:smoothness}
-Let $S,S'$ be multisets of labeled examples.
+%There have been increasing efforts in recent years in developing fully dynamic algorithms for machine learning problems, with most of the literature focusing on unsupervised tasks, such as clustering~\cite{Cohen-Addad2019_FullyDynamicConsistent, Henzinger2020_FullyDynamicCoresets, Bateni2021_OptimalFullyDynamic, Chan2018_FullyDynamicKCenter}, graph mining~\cite{Bhattacharya2015_SpaceAndTimeEfficientAlgorithm, Epasto2015_EfficientDensestSubgraph, DeStefani2017_TRIESTCountingLocal} and other optimization problems~\cite{DBLP:conf/nips/LattanziMNTZ20, DBLP:journals/siamcomp/BhattacharyaHI18}.
+%However, to the best of our knowledge, fully-dynamic supervised machine learning has been mostly unexplored so far. 
+%The works closest to ours are those in the incremental setting. Here, the algorithm receives a stream of examples from a distribution, and has to perform well when compared to the offline tree built on the entire sequence. In this setting, Hoeffding trees~\cite{Domingos2000_HighSpeedStreams} emerged as one of the most effective approaches, inspiring several variants, even ones capable of handling concept drifts~\cite{Domingos2001_MiningTimeSeries,Gama2003_HighSpeedStreams,Manapragada2018_EFDT,Das2019_LearnSmartWithLess,sun2020_SpeedingUpVeryFast,Haug2022_DynamicModelTree,Jin2003_EfficientDecisionTree,Rutkowski2013_DecisionTreesForMining}; see~\cite{Manapragada2022_AnEagerSplitting} for a survey. These algorithms crucially rely on the examples being i.i.d., which allows them to compute good splits with high probability via concentration bounds (whence the name). Moreover, those algorithms cannot handle efficiently real-valued features, since on those features they would update $\Theta(n)$ counters at each time, even when only insertions are allowed. Our algorithms instead efficiently handle arbitrary sequences of insertions and deletions of examples with real-valued features. 
+\section{Preliminaries}
+\subsection{Gini index and Gini gain smoothness}
+The Gini index and Gini gain were introduced in section \ref{subsec:intro_dt_split_criteria}. The Gini gain is one of the main metrics used for determining the best splits in decision trees. We want to study to which extend a limited number of modifications to the training set can change the Gini index or the best Gini gain from the set. 
+
+We use the following notation with $o$ a boolean operation:
+\begin{equation}
+    \delta_o = \begin{cases}
+        1 & \text{ if $o$ is \codetrue}\\
+        0 & \text{ else}
+    \end{cases}
+\end{equation}
+We then have the following equivalent definition of the Gini index:
+\begin{property}
+    \begin{equation}\label{eq:gini_index_as_sum}
+        g(S) = \frac{2}{n^2} \sum_{i=1}^{|S|}\sum_{j=i+1}^{|S|} \delta_{y_i \neq y_j}
+    \end{equation}
+\end{property}
+\begin{proof}
+    We have $\sum_{i=1}^{|S|}\sum_{j=1}^{|S|} \delta_{y_i = y_j} = \sum_{y \in \scY} N_{S,y}^2$. From equation \ref{eq:general_gini_index_def} we have:
+    \begin{equation*}
+        \begin{split}
+            & g(S) = 1 - \frac{1}{n^2} \sum_{i=1}^{|S|}\sum_{j=1}^{|S|} \delta_{y_i = y_j}\\
+            \Leftrightarrow & g(S) = \frac{1}{n^2} \sum_{i=1}^{|S|}\sum_{j=1}^{|S|} 1 - \delta_{y_i = y_j}
+        \end{split}
+    \end{equation*}
+    We know that $1 - \delta_{y_i = y_j} = \delta_{y_i \neq y_j}$. We rearrange the terms to find the sum in equation \ref{eq:gini_index_as_sum} and conclude the proof.
+\end{proof}
+
+We call \define{edit distance} $\ED(S, S')$ from one set of data $S$ to another $S'$ the minimal number of insertions and deletions needed to build $S'$ from $S$. We first establish two lemma on the local smoothness of the Gini index and the Gini gain:
+\begin{lemma}\label{lem:local_gini_index_smoothness}
+    Let $S, S'$ be two set of training data of size at least 1. If $\ED(S, S') \leq 1$. then $|g(S) - g(S')| \leq \frac{2}{\max(|S|, |S'|)}$
+\end{lemma}
+
+%For the second lemma, we note $G(S, j, t)$ the Gini gain of splitting the training set $S$ along the feature $j$ using the threshold or category $t$. It means that, if the feature $j$ is numerical, the data points for which the feature $j$ is less than or equal to $t$ go to one subset while the other points go to the other subset. If the feature is categorical on the other hand, the data points that have the feature $j$ equals category $t$ go to one subset while the other points go to the other subset.
+\begin{lemma}\label{lem:local_gini_gain_smoothness}
+    Let $S, S'$ be two set of training data of size at least 1. Let $S_1$ and $S_2$ the two subsets created by a splitting function applied on $S$, and $S_1'$ and $S_2'$ the subsets created by the same splitting function applied on $S'$. If $\ED(S, S') \leq 1$. then
+    \begin{equation*}
+        |G(S, S_1, S_2) - G(S', S_1', S_2')| \leq \frac{12}{\max(|S|, |S'|)}        
+    \end{equation*}
+\end{lemma}
+
+\begin{proof}[Proof of lemma \ref{lem:local_gini_index_smoothness}]
+    The case $\ED(S, S') = 0$ is trivial, we assume $\ED(S, S') = 1$. Without loss of generality assume $S = \{(x_1, y_1)\} \cup S'$. Let $n = |S|$.
+    
+    Let $D_S = 2\sum_{i=1}^{|S|}\sum_{j=i+1}^{|S|} \delta_{y_i \neq y_j}$. We see that $g(S) = \frac{1}{n^2}D_S$. We also see that:
+    \begin{equation*}
+        D_S - 2(n-1) \leq D_{S'} \leq D_S
+    \end{equation*}
+    therefore we have:
+    \begin{align}
+        g(S') - g(S) &\geq \left(\frac{1}{(n-1)^2} - \frac{1}{n^2}\right)D_S - \frac{2}{n-1}\label{eq:proof_lem_loc_gini_ind_smooth_1}\\
+        g(S') - g(S) &\leq \left(\frac{1}{(n-1)^2} - \frac{1}{n^2}\right)D_S\label{eq:proof_lem_loc_gini_ind_smooth_2}
+    \end{align}
+    We can factorize each inequation using $\frac{1}{(n-1)^2} - \frac{1}{n^2} = \frac{2n-1}{n^2(n-1)^2}$
+
+    We first study (\ref{eq:proof_lem_loc_gini_ind_smooth_2}). We know that $D_S < (n-1)^2$, and so we have:
+    \begin{equation*}
+        g(S') - g(S) < \frac{2n-1}{n^2} < \frac{2}{n}
+    \end{equation*}
+
+    Now we study (\ref{eq:proof_lem_loc_gini_ind_smooth_1}). First note that if $D_S = 0$ then $g(S) = g(S') = 0$ and the theorem holds. We therefore focus on the case when $D_S > 0$.
+
+    We note that if we consider the class $y$ that has the lowest number of data points, and we move one point from that class to another, then the value of $D_S$ is necessarily reduced or equal. From any training set $S$ st. $D_S > 0$ we can apply this process recursively to create a new training set $S^*$ of which all the points but one are in the same class. Since $D_{S^*} = 2(n-1)$ and the process only decreases $D_S$, we deduce that if $D_S > 0$ then $D_S \geq 2(n-1)$.
+
+    Then, (\ref{eq:proof_lem_loc_gini_ind_smooth_1}) becomes:
+    \begin{equation*}
+        \begin{split}
+            g(S') - g(S) &\geq \frac{2n-1}{n^2(n-1)^2} D_S - \frac{2}{n-1}\\
+            &\geq 2\frac{2n-1}{n^2(n-1)} - \frac{2}{n-1}\\
+            &\geq -\frac{2}{n}\left(\frac{n^2 - 2n + 1}{n (n-1)}\right)\\
+            &\geq -\frac{2}{n}\left(\frac{n-1}{n}\right)\\
+            &\geq -\frac{2}{n}
+        \end{split}
+    \end{equation*}
+\end{proof}
+
+
+We can now establish the following theorem:
+
+\begin{theorem}
+\label{th:smoothness}
+Let $S,S'$ be sets of data.
 \begin{enumerate}%\itemsep0pt
     \item $|G(S,j,t) - G(S',j,t)| \le 12 \EDR(S,S'), \forall (j,t) \in [d] \times \R$
     \item $|g(S)-g(S')| \le 2.5 \, \EDR(S,S')$.
 \end{enumerate}
-\end{lemma}
+\end{theorem}
 %If $S$ is a sequence of examples and $z$ is an example, then $S \cup \{x\}$ denotes the concatenation of $S$ and $x$, while $S \setminus \{z\}$ denotes the sequence obtained by deleting any one occurrence of $z$ from $S$. 
 
 \subsection{$\beps$-feasibility: a new performance guarantee for dynamic decision trees}
@@ -101,11 +171,7 @@ Our contributions can be summarized as follows:
 \end{itemize}
 
 \noindent\textbf{Related Work.} 
-%There have been increasing efforts in recent years in developing fully dynamic algorithms for machine learning problems, with most of the literature focusing on unsupervised tasks, such as clustering~\cite{Cohen-Addad2019_FullyDynamicConsistent, Henzinger2020_FullyDynamicCoresets, Bateni2021_OptimalFullyDynamic, Chan2018_FullyDynamicKCenter}, graph mining~\cite{Bhattacharya2015_SpaceAndTimeEfficientAlgorithm, Epasto2015_EfficientDensestSubgraph, DeStefani2017_TRIESTCountingLocal} and other optimization problems~\cite{DBLP:conf/nips/LattanziMNTZ20, DBLP:journals/siamcomp/BhattacharyaHI18}.
-%However, to the best of our knowledge, fully-dynamic supervised machine learning has been mostly unexplored so far. 
-The works closest to ours are those in the incremental setting. Here, the algorithm receives a stream of examples from a distribution, and has to perform well when compared to the offline tree built on the entire sequence. In this setting, Hoeffding trees~\cite{Domingos2000_HighSpeedStreams} emerged as one of the most effective approaches, inspiring several variants, even ones capable of handling concept drifts~\cite{Domingos2001_MiningTimeSeries,Gama2003_HighSpeedStreams,Manapragada2018_EFDT,Das2019_LearnSmartWithLess,sun2020_SpeedingUpVeryFast,Haug2022_DynamicModelTree,Jin2003_EfficientDecisionTree,Rutkowski2013_DecisionTreesForMining}; see~\cite{Manapragada2022_AnEagerSplitting} for a survey. These algorithms crucially rely on the examples being i.i.d., which allows them to compute good splits with high probability via concentration bounds (whence the name). Moreover, those algorithms cannot handle efficiently real-valued features, since on those features they would update $\Theta(n)$ counters at each time, even when only insertions are allowed. Our algorithms instead efficiently handle arbitrary sequences of insertions and deletions of examples with real-valued features. 
 
-We observe that there are general techniques to turn offline data structures into dynamic ones, see~\cite{bentley1980_DecomposableSearchingProblems}. Those techniques, however, work only for problems that have a special decomposability property --- loosely speaking, the answer to a query (e.g., find $\min(X)$ for some set $X$) must be quickly computable from the answers to sub-queries (e.g., $\min(A \cup B) = \min(\min(A),\min(B))$). In our case, a query corresponds to the label predicted by the tree for a given $x$. Unfortunately, our problem is far from decomposable and it does not seem solvable via such techniques.
 
 
 % A decision tree is a triple $(T,\Splits,L)$, where $T=(V,A)$ is a directed binary tree rooted at $r(T)$, and $\Splits$ and $L$ are functions that assign splits to internal nodes and labels to the leaves. More formally $\Splits = \{\sigma_v : v \in V(T)\}$ where $\sigma_v = (j_v,t_v) \in [d] \times \R$ for every internal node $v$ of $T$, while $L=\{L_v : v \in V(T)\}$ where $L_v \in \{0,1\}$ for every leaf $v$ of $T$. For any $x \in \scX$ and any internal vertex $v$ of $T$ let $\operatorname{succ}(v,x)$ be the left child of $v$ if $x_j \le t$ and the right child of $v$ otherwise, where $\sigma_v=(j,t)$. For any $v \in V(T)$ let $P_v=(v_0,\ldots,v_{\ell})$ be the unique path from $v_0=r(T)$ to $v_{\ell}=v$. For a multiset $S$, denote by $S_v$ the set of examples $x \in S$ such that $\operatorname{succ}(v_i,x)=v_{i+1}$ for all $i=0,\ldots,\ell-1$; this is the subset of $S$ \emph{associated} to $v$. For every $x \in \scX$ let $v(x)$ be the leaf $x$ is associated to. The labeling given by $T$ is the function $T:\scX \to \scY$ such that $T(x)=L_{v(x)}$ for every $x \in \scX$.
@@ -400,16 +466,14 @@ Since $\epsApx < \frac{1}{24} = \frac{1}{6}-\frac{1}{8}$, we conclude that $\ell
 
 For (ii), note that the subsequence of $\widehat{S}$ having the $\ell$-th feature set to $1$ has all labels equal to $A_{\kappa\ell}$. This implies that the corresponding child $v$ of the root is a leaf, since it meets at least one of the stopping conditions, and that it assigns label $A_{\kappa\ell}$. This proves that Bob returns $A_{\kappa\ell}$.
 
-%\iffalse
-%%Then, Bob runs $\mathcal{A}$ to compute an $\beps$-feasible class for the example $\widehat{\bx}$, where $\widehat{x}_j=1$, $\forall j \in [d]$. 
-%
-%The sequence $S$ is chosen in a way that any $\beps$-feasible tree built on the examples $(\bx_{\kappa}^h,y_{\kappa}^h)$, $h \in [2k]$, which splits on feature $j \in [d]$, would predict the class $A_{\kappa j}$ on the $1$-branch. The role of the points $(\bx_{n+\ell}^h,y_{n+\ell}^h), h \in [2k]$ is to make sure that the feature $\ell$ has best Gini gain and therefore will be chosen for splitting, thereby allowing Bob to retrieve $A_{\kappa\ell}$. We are going to prove next that this is indeed the case. 
-%
-%First, $g(\widehat{S})=\frac12$, in that, by construction, there is an equal number of $0$'s and $1$'s in the labels of  $\widehat{S}$.
-%$g(\widehat{S}_{\ell}^{+})=0$, as we only have the label $A_{\kappa\ell}$ in $\widehat{S}_{\ell}^{+}$, while $|\widehat{S}_{\ell}^{+} | = \frac14 \cdot \widehat{S}$. Moreover, $\frac23$ of the examples in $\widehat{S}_{\ell}^{-}$ are labeled $1-A_{\kappa,\ell}$, resulting in $g(\widehat{S}_{\ell}^{-})= 2 \cdot \frac23 \cdot \frac13 = \frac49$. Hence, we get $G(\widehat{S},\ell,0)= \frac12 - \frac34 \cdot \frac49 = \frac16$. For the Gini gain of every other feature $j \neq \ell$ we obtain the following. If $j \in [d+1,d+\bar{d}]$, $G(\widehat{S},j,0)=0$, in that, those features contains a binary representation of either $\kappa$ or $n+\ell$. If $j \in [d] \setminus \{\ell \}$ we proceed as follows. Observe that $|\widehat{S}_{j}^{+}| = |\widehat{S}_{j}^{-}|$, while the minority class in each of $\widehat{S}_{j}^{+}$ and $\widehat{S}_{j}^{-}$ occurs with probability $\frac{k}{2} / (2k) = \frac14$. Hence, for every $j \in [d] \setminus \{\ell \}$ we obtain $G(\widehat{S},j,0)= \frac12 - 2 \cdot \frac14 \cdot \frac 34 = \frac18 $.
-%
-%We derive $G(\widehat{S},\ell,0) - G(\widehat{S},j,0) \geq \frac1{24}$, for every $j \in [d+\bar{d}] \setminus \{\ell\}$. As a result, if $\epsApx < \frac1{24}$, feature $\ell$ must be chosen as the splitting feature at the root of any $\beps$-decision tree. Moreover, the $1$-branch meets at least one of the stopping conditions, therefore the $1$-branch will not be split further. If $\mathcal{A}$ is $(\beps,\frac34)$-feasible , Bob can retrieve $A_{\kappa\ell}$ by computing an $\beps$-feasible class for $\widehat{\bx}$ with probability $> \frac34$. Hence, the size of $\mathcal{M}$ must be in $\Omega(n \cdot d)$. As $S$ can be stored using $O(n \cdot d \cdot k \cdot \log n)$ bits (assuming $n \geq d$), the claim follows. 
-%\fi
+Then, Bob runs $\mathcal{A}$ to compute an $\beps$-feasible class for the example $\widehat{\bx}$, where $\widehat{x}_j=1$, $\forall j \in [d]$. 
+
+The sequence $S$ is chosen in a way that any $\beps$-feasible tree built on the examples $(\bx_{\kappa}^h,y_{\kappa}^h)$, $h \in [2k]$, which splits on feature $j \in [d]$, would predict the class $A_{\kappa j}$ on the $1$-branch. The role of the points $(\bx_{n+\ell}^h,y_{n+\ell}^h), h \in [2k]$ is to make sure that the feature $\ell$ has best Gini gain and therefore will be chosen for splitting, thereby allowing Bob to retrieve $A_{\kappa\ell}$. We are going to prove next that this is indeed the case. 
+
+First, $g(\widehat{S})=\frac12$, in that, by construction, there is an equal number of $0$'s and $1$'s in the labels of  $\widehat{S}$.
+$g(\widehat{S}_{\ell}^{+})=0$, as we only have the label $A_{\kappa\ell}$ in $\widehat{S}_{\ell}^{+}$, while $|\widehat{S}_{\ell}^{+} | = \frac14 \cdot \widehat{S}$. Moreover, $\frac23$ of the examples in $\widehat{S}_{\ell}^{-}$ are labeled $1-A_{\kappa,\ell}$, resulting in $g(\widehat{S}_{\ell}^{-})= 2 \cdot \frac23 \cdot \frac13 = \frac49$. Hence, we get $G(\widehat{S},\ell,0)= \frac12 - \frac34 \cdot \frac49 = \frac16$. For the Gini gain of every other feature $j \neq \ell$ we obtain the following. If $j \in [d+1,d+\bar{d}]$, $G(\widehat{S},j,0)=0$, in that, those features contains a binary representation of either $\kappa$ or $n+\ell$. If $j \in [d] \setminus \{\ell \}$ we proceed as follows. Observe that $|\widehat{S}_{j}^{+}| = |\widehat{S}_{j}^{-}|$, while the minority class in each of $\widehat{S}_{j}^{+}$ and $\widehat{S}_{j}^{-}$ occurs with probability $\frac{k}{2} / (2k) = \frac14$. Hence, for every $j \in [d] \setminus \{\ell \}$ we obtain $G(\widehat{S},j,0)= \frac12 - 2 \cdot \frac14 \cdot \frac 34 = \frac18 $.
+
+We derive $G(\widehat{S},\ell,0) - G(\widehat{S},j,0) \geq \frac1{24}$, for every $j \in [d+\bar{d}] \setminus \{\ell\}$. As a result, if $\epsApx < \frac1{24}$, feature $\ell$ must be chosen as the splitting feature at the root of any $\beps$-decision tree. Moreover, the $1$-branch meets at least one of the stopping conditions, therefore the $1$-branch will not be split further. If $\mathcal{A}$ is $(\beps,\frac34)$-feasible , Bob can retrieve $A_{\kappa\ell}$ by computing an $\beps$-feasible class for $\widehat{\bx}$ with probability $> \frac34$. Hence, the size of $\mathcal{M}$ must be in $\Omega(n \cdot d)$. As $S$ can be stored using $O(n \cdot d \cdot k \cdot \log n)$ bits (assuming $n \geq d$), the claim follows. 
 
 To prove the space lower bound, note that $S$ consists of $n=2k(N+D)$ examples, each of which can be encoded in $d=D+\bar D = O(D + \log(D+N))$ bits. For $D = O(N)$, this yields $n=O(kN)$ and $d=O(D \log N)$ and therefore $ND = \Omega\big(\frac{nd}{k\log n}\big)$. Recalling that Alice must send $\Omega(ND)$ bits to Bob concludes the proof.
 \end{proof}
@@ -421,19 +485,16 @@ We conclude this section with a lower bound on the running time of any fully dyn
 Let $k,h \ge 1$ and $\epsThr,\epsApx\in [0, \frac{1}{2})$. For arbitrarily large $n$ and $d$ there exist sequences of $n$ \ins\ and \del\ operations over $\{0,1\}^d \times \{0,1\}$ such that, in the matrix access model, any weakly $(\beps,\nicefrac{2}{3})$-feasible fully dynamic algorithm has expected running time $\Omega(nd)$.
 \end{theorem}
 
-%### to add it back or supplemental material ###
-%\begin{proof}
-%For $j \in [d]$ let $M^{(j)} \in \{0,1\}^{(2k) \times (d+1)}$ be as follows. The first $k$ rows are set to zero. The last $k$ rows have the $j$-th entry and the $(d+1)$-th entry set to one. Let $S^{(j)}$ be the sequence having the rows of $M^{(j)}$ as elements, consider any decision tree $(\beps,0)$-feasible w.r.t.\ $S^{(j)}$, and let $u$ be its root. Since $|S^{(j)}|>k$ and $g(S)=\frac{1}{2}>\epsThr$ and $u$ has depth $0<h$, then $u$ is not a leaf. Moreover, since $g(S^{(j)},j)=\frac{1}{2}$ while $g(S^{(j)},j')=0 \; \forall j' \in [d] \setminus \{j\}$, $u$ splits on $j$.
-%It is immediate to see that the children of $u$ are leaves with labelling rule $\Ind_{\{x_j=1\}}$, so this is the only feasible class for any $x$. %Moreover, let $M^{(0)}=0^{2k \times (d+1)}$.
-%
-%Now let $\scA$ be a fully dynamic algorithm and let $j \in [d]$. First we ask $\scA$ to perform one \ins\ operation on every row of $M^{(j)}$, then we ask $\scA(\be_i)$ for some $i \in [d]$. As shown above, $\scA(\be_i)=\Ind_{(\be_i)_j=1}=\Ind_{\be_i=\be_j}$. But deciding if $\be_i=\be_j$ requires looking at $\Omega(|x|)=\Omega(d)$ bits of $\be_i$ and $\be_j$, hence $\scA$ has running time $\Omega(d)$. Now ask $\scA$ to delete the $2k$ examples inserted and repeat. This yields a running time lower bound of $\Omega(nd)$ where $n$ is the total number of insertions and deletions.
-%\end{proof}
-%### to add it back or supplemental material ###
+\begin{proof}
+For $j \in [d]$ let $M^{(j)} \in \{0,1\}^{(2k) \times (d+1)}$ be as follows. The first $k$ rows are set to zero. The last $k$ rows have the $j$-th entry and the $(d+1)$-th entry set to one. Let $S^{(j)}$ be the sequence having the rows of $M^{(j)}$ as elements, consider any decision tree $(\beps,0)$-feasible w.r.t.\ $S^{(j)}$, and let $u$ be its root. Since $|S^{(j)}|>k$ and $g(S)=\frac{1}{2}>\epsThr$ and $u$ has depth $0<h$, then $u$ is not a leaf. Moreover, since $g(S^{(j)},j)=\frac{1}{2}$ while $g(S^{(j)},j')=0 \; \forall j' \in [d] \setminus \{j\}$, $u$ splits on $j$.
+It is immediate to see that the children of $u$ are leaves with labelling rule $\Ind_{\{x_j=1\}}$, so this is the only feasible class for any $x$. %Moreover, let $M^{(0)}=0^{2k \times (d+1)}$.
+
+Now let $\scA$ be a fully dynamic algorithm and let $j \in [d]$. First we ask $\scA$ to perform one \ins\ operation on every row of $M^{(j)}$, then we ask $\scA(\be_i)$ for some $i \in [d]$. As shown above, $\scA(\be_i)=\Ind_{(\be_i)_j=1}=\Ind_{\be_i=\be_j}$. But deciding if $\be_i=\be_j$ requires looking at $\Omega(|x|)=\Omega(d)$ bits of $\be_i$ and $\be_j$, hence $\scA$ has running time $\Omega(d)$. Now ask $\scA$ to delete the $2k$ examples inserted and repeat. This yields a running time lower bound of $\Omega(nd)$ where $n$ is the total number of insertions and deletions.
+\end{proof}
 
 \subsection{Experiments}
 %We compare \algo\ against the state-of-the-art in terms of speed (running time) and quality of its predictions (precision/recall of the decision tree), as a function of the algorithm's ``dynamicity'' (the value of $\epsilon$ at line~\ref{line:if_c_eps_s} of \AlgoUpdate).
-We compare \algo\ against two state-of-the-art algorithms for incremental decision tree learning %mentioned above
-, EFDT \cite{Manapragada2018_EFDT} and HAT \cite{bifet2009_AdaptiveLearning}, using the MOA software \cite{Bifet2010_MOA}. Similarly to \algo, EFDT and HAT aim at keeping $\epsilon$-optimal splits, which they do with high probability when the examples are i.i.d. from a distribution.
+We compare \algo\ against two state-of-the-art algorithms for incremental decision tree learning, EFDT \cite{Manapragada2018_EFDT} and HAT \cite{bifet2009_AdaptiveLearning}, using the MOA software \cite{Bifet2010_MOA}. Similarly to \algo, EFDT and HAT aim at keeping $\epsilon$-optimal splits, which they do with high probability when the examples are i.i.d. from a distribution.
 %However, they might obtain a relatively poor approximation for the Gini gain of real-valued features, in that, in such a case, an optimal Gini gain is often expensive to compute.
 Due to space limitations, the results for HAT and other experiments can be found in the full version of the paper~\cite{BDS22arxiv}\todo{Remove that, check consistency with full version}.  
 
@@ -524,7 +585,6 @@ The parameters of EFDT and HAT are set to the original values specified by the a
     \label{tab:EFDT_FDDT}
 \end{table}
 
-\iffalse
 \begin{table}\small
     \centering
     \begin{tabular}{l|l|l|l}
@@ -568,7 +628,6 @@ The parameters of EFDT and HAT are set to the original values specified by the a
     \caption{F1-score for ``similar'' running times in the ST model.}
     \label{tabm:similar_f1_scores}
 \end{table}
-\fi
 
 %\subsection{Competitors} 
 %\begin{itemize}
@@ -576,7 +635,7 @@ The parameters of EFDT and HAT are set to the original values specified by the a
 %    \item \cite{Manapragada2018_EFDT}: introduces the Hoeffding Anytime Tree and its implementation EFDT (Extremely Fast Decision Tree)
 %    d\item \cite{Das2019_LearnSmartWithLess}: improves on VFDT's conservativeness via statistical resampling
 %    \item \cite{sun2020_SpeedingUpVeryFast}: improves on VFDT by heuristically reducing the attempts and/or time to split 
-%    \item \cite{Barddal20}: adds regularization to EFDT and others, to avoid too large trees
+%    \item \cite{Barddal2020_RegularizedAndIncremental}: adds regularization to EFDT and others, to avoid too large trees
 %    \item \cite{Manapragada2022_AnEagerSplitting}: thorough study of the Hoeffding AnyTime Tree (EFDT) in ensemble setting, uses ``the largest and most comprehensive set of testbenches in the online learning literature''
 %    \item \cite{Haug2022_DynamicModelTree}: some other method called ``Dynamic Model Tree'' which is claimed to outperform previous methods
 %\end{itemize}
