@@ -1,16 +1,16 @@
 \chapter{Dynamic Decision Trees}
 \section{Introduction}
-Decision trees are a cornerstone of machine learning, and an essential tool in any machine learning library. Decision-tree-based algorithms such as random forests or XGBoost, are widely used to solve real-world machine learning problems. They also boast the appealing feature of being explainable\todo{Add ref to papers about explainability of DT}.
-As many other machine learning problems, the classification problem has a \define{dynamic} version, as explained in section \ref{subsec:dynamic_intro}. In that version the training dataset evolves with time by inserting and deleting data points. The dynamic classification problem is called \define{fully-dynamic} if insertions and deletions are permitted, and \define{online} or \define{incremental} if only the former applies.
+Decision trees are a cornerstone of machine learning, and an essential tool in any machine learning library. Decision-tree-based algorithms, such as random forests or XGBoost, are widely used to solve real-world machine learning problems. They also boast the appealing feature of being explainable\todo{Add ref to papers about explainability of DT}.
+As many other machine learning problems, the classification problem has a \define{dynamic} version, as explained in section \ref{subsec:dynamic_intro}. In that version, the training dataset evolves with time by inserting and deleting data points. The dynamic classification problem is called \define{fully-dynamic} if insertions and deletions are permitted, and \define{online} or \define{incremental} if only the former applies.
 
-In the online version, there is an additional difficulty called \define{concept drift}. Is that case, the underlying model that makes data belong to one class or another changes with time so that the relevance of the data is maximal at the time when they are inserted and slowly decay as new points are inserted. Thus if the model is updated by considering each data equally, its accuracy will be sharply reduced. If the algorithm used to build the model can handle the fully-dynamic problem, then it is possible to handle the concept drift by working on a window of data, i.e. setting a constant $t$ and only working on the last $t$ inserted data, deleting the oldest data each time a new one is inserted. There are however algorithms built specifically for the online problem that can handle concept drift.
+In the online version, there is an additional difficulty called \define{concept drift}. Is that case, the underlying model that makes data belong to one class or another changes with time so that the relevance of the data is maximal at the time when they are inserted and slowly decay as new points are inserted. Thus, if the model is updated by considering each data equally, its accuracy will be sharply reduced. If the algorithm used to build the model can handle the fully-dynamic problem, then it is possible to handle the concept drift by working on a window of data, i.e. setting a constant $t$ and only working on the last $t$ inserted data, deleting the oldest data each time a new one is inserted. There are however algorithms built specifically for the online problem that can handle concept drift.
 
-Many variants of the Decision Tree method exist to deal with the online problem. However, to the best of our knowledge the only variant compatible with the fully-dynamic problem is BOAT\todo{Add citation}. This method however was not specifically designed for this task\todo{Add ref to discussion?}.
+Many variants of the Decision Tree method exist to deal with the online problem. However, to the best of our knowledge, the only variant compatible with the fully-dynamic problem is BOAT\todo{Add citation}. This method however was not specifically designed for this task\todo{Add ref to discussion?}.
 
-This chapter presents a new fully-dynamic decision tree building algorithm. We first review the literature related to online decision trees. A new theorem about the Gini index and gain smoothness is presented and a new target for fully-dynamic decision trees is described, before detailing the algorithm. The following two sections present the theoretical and experimental results of our algorithms. Finally we discuss the findings and we conclude.
+This chapter presents a new fully-dynamic decision tree building algorithm. We first review the literature related to online decision trees. A new theorem about the Gini index and gain smoothness is presented and a new target for fully-dynamic decision trees is described, before detailing the algorithm. The following two sections present the theoretical and experimental results of our algorithms. Finally, we discuss the findings and we conclude.
 
 \subsection{Our contributions}
-\subsection{Organisation of the chapter}
+\subsection{Organization of the chapter}
 \subsection{Acknowledgements}
 
 \section{Online decision trees: A brief review of the literature}
@@ -22,8 +22,8 @@ This chapter presents a new fully-dynamic decision tree building algorithm. We f
     \item \cite{Das2019_LearnSmartWithLess}: improves on VFDT's conservativeness via statistical resampling
    \item \cite{sun2020_SpeedingUpVeryFast}: improves on VFDT by heuristically reducing the attempts and/or time to split 
    \item \cite{Barddal2020_RegularizedAndIncremental}: adds regularization to EFDT and others, to avoid too large trees
-   \item \cite{Manapragada2022_AnEagerSplitting}: thorough study of the Hoeffding AnyTime Tree (EFDT) in ensemble setting, uses ``the largest and most comprehensive set of testbenches in the online learning literature''
-   \item \cite{Haug2022_DynamicModelTree}: some other method called ``Dynamic Model Tree'' which is claimed to outperform previous methods
+   \item \cite{Manapragada2022_AnEagerSplitting}: thorough study of the Hoeffding AnyTime Tree (EFDT) in ensemble setting, uses “the largest and most comprehensive set of testbenches in the online learning literature”
+   \item \cite{Haug2022_DynamicModelTree}: some other method called “Dynamic Model Tree” which is claimed to outperform previous methods
 \end{itemize}
 
 %There have been increasing efforts in recent years in developing fully dynamic algorithms for machine learning problems, with most of the literature focusing on unsupervised tasks, such as clustering~\cite{Cohen-Addad2019_FullyDynamicConsistent, Henzinger2020_FullyDynamicCoresets, Bateni2021_OptimalFullyDynamic, Chan2018_FullyDynamicKCenter}, graph mining~\cite{Bhattacharya2015_SpaceAndTimeEfficientAlgorithm, Epasto2015_EfficientDensestSubgraph, DeStefani2017_TRIESTCountingLocal} and other optimization problems~\cite{DBLP:conf/nips/LattanziMNTZ20, DBLP:journals/siamcomp/BhattacharyaHI18}.
@@ -31,7 +31,7 @@ This chapter presents a new fully-dynamic decision tree building algorithm. We f
 %The works closest to ours are those in the incremental setting. Here, the algorithm receives a stream of examples from a distribution, and has to perform well when compared to the offline tree built on the entire sequence. In this setting, Hoeffding trees~\cite{Domingos2000_HighSpeedStreams} emerged as one of the most effective approaches, inspiring several variants, even ones capable of handling concept drifts~\cite{Domingos2001_MiningTimeSeries,Gama2003_HighSpeedStreams,Manapragada2018_EFDT,Das2019_LearnSmartWithLess,sun2020_SpeedingUpVeryFast,Haug2022_DynamicModelTree,Jin2003_EfficientDecisionTree,Rutkowski2013_DecisionTreesForMining}; see~\cite{Manapragada2022_AnEagerSplitting} for a survey. These algorithms crucially rely on the examples being i.i.d., which allows them to compute good splits with high probability via concentration bounds (whence the name). Moreover, those algorithms cannot handle efficiently real-valued features, since on those features they would update $\Theta(n)$ counters at each time, even when only insertions are allowed. Our algorithms instead efficiently handle arbitrary sequences of insertions and deletions of examples with real-valued features. 
 \section{Preliminaries}
 \subsection{Gini index and Gini gain smoothness}
-The Gini index and Gini gain were introduced in section \ref{subsec:intro_dt_split_criteria}. The Gini gain is one of the main metrics used for determining the best splits in decision trees. We want to study to which extend a limited number of modifications to the training set can change the Gini index or the best Gini gain from the set. 
+The Gini index and Gini gain were introduced in section \ref{subsec:intro_dt_split_criteria}. The Gini gain is one of the main metrics used for determining the best splits in decision trees. We want to study to which extent a limited number of modifications to the training set can change the Gini index or the best Gini gain from the set. 
 
 We use the following notation with $o$ a boolean operation:
 \begin{equation}
@@ -57,7 +57,7 @@ We then have the following equivalent definition of the Gini index:
     We know that $1 - \delta_{y_i = y_j} = \delta_{y_i \neq y_j}$. We rearrange the terms to find the sum in equation \ref{eq:gini_index_as_sum} and conclude the proof.
 \end{proof}
 
-We call \define{edit distance} $\ED(S, S')$ from one set of data $S$ to another $S'$ the minimal number of insertions and deletions needed to build $S'$ from $S$. We first establish two lemma on the local smoothness of the Gini index and the Gini gain:
+We call \define{edit distance} $\ED(S, S')$ from one set of data $S$ to another $S'$ the minimal number of insertions and deletions needed to build $S'$ from $S$. We first establish two lemmas on the local smoothness of the Gini index and the Gini gain:
 \begin{lemma}\label{lem:local_gini_index_smoothness}
     Let $S, S'$ be two set of training data of size at least 1. If $\ED(S, S') \leq 1$. then $|g(S) - g(S')| \leq \frac{2}{\max(|S|, |S'|)}$
 \end{lemma}
@@ -71,7 +71,7 @@ We call \define{edit distance} $\ED(S, S')$ from one set of data $S$ to another 
 \end{lemma}
 
 \begin{proof}[Proof of lemma \ref{lem:local_gini_index_smoothness}]
-    The case $\ED(S, S') = 0$ is trivial, we assume $\ED(S, S') = 1$. Without loss of generality assume $S = \{(x_1, y_1)\} \cup S'$. Let $n = |S|$.
+    The case $\ED(S, S') = 0$ is trivial, we assume $\ED(S, S') = 1$. Without loss of generality, assume $S = \{(x_1, y_1)\} \cup S'$. Let $n = |S|$.
     
     Let $D_S = 2\sum_{i=1}^{|S|}\sum_{j=i+1}^{|S|} \delta_{y_i \neq y_j}$. We see that $g(S) = \frac{1}{n^2}D_S$. We also see that:
     \begin{equation*}
@@ -157,7 +157,7 @@ Let $S, S'$ be two set of training data of size at least 1. Let $S_1$ and $S_2$ 
 \end{enumerate}
 \end{theorem}
 
-This theorem proves that small variations in the set of data only causes small variations in the gini index and in the gain of any split of this set.
+This theorem proves that small variations in the set of data only causes small variations in the Gini index and in the gain of any split of this set.
 
 \begin{proof}[Proof for the Gini gain part]
     If $\EDR(S, S') \geq \frac{|\scY|-1}{13|\scY| - 1}$, then 
@@ -185,7 +185,7 @@ This theorem proves that small variations in the set of data only causes small v
     \end{align*}
 \end{proof}
 \begin{proof}[Proof for the Gini index part]
-    This proof is very similar to the one for the Gini gain part, so we do not go into as much details. We first see that if $\EDR(S, S') \geq \frac{|\scY|-1}{3|\scY| - 1}$ then the theorem holds, therefore we focus on the case when $\EDR(S, S') < \frac{|\scY|-1}{3|\scY| - 1}$.
+    This proof is very similar to the one for the Gini gain part, so we do not go into as many details. We first see that if $\EDR(S, S') \geq \frac{|\scY|-1}{3|\scY| - 1}$ then the theorem holds, therefore we focus on the case when $\EDR(S, S') < \frac{|\scY|-1}{3|\scY| - 1}$.
 
     We define a sequence of training sets as in the previous proof. Knowing that $\EDR(S, S') < \frac{|\scY|-1}{3|\scY| - 1}$ and in the same way that we have shown equation (\ref{subeq:proof_gain_smoothness_single_step_size}), we show that 
     \begin{equation}\label{eq:proof_index_smoothness_single_step_size}
@@ -201,7 +201,7 @@ This theorem proves that small variations in the set of data only causes small v
 
 \subsection{$\beps$-feasibility: a new performance guarantee for dynamic decision trees}
 
-The complete computing of a decision tree is computationally expensive \todo{give exemple for existing algo}. It would therefore not be efficient to recompute the whole decision tree at each insertion or deletion of a point\todo{Check if not already told in SotA}. To avoid this caveat, our target is not to compute the perfect decision tree at each step. We introduce instead a new target called $\beps$-feasibility. Roughly speaking, a decision tree is $\beps$-feasibility if the Gini gain of each of its splits is not too far from the Gini gain of the optimal split.
+The complete computing of a decision tree is computationally expensive \todo{give exemple for existing algo}. It would therefore not be efficient to recompute the whole decision tree at each insertion or deletion of a point\todo{Check if not already told in SotA}. To avoid this caveat, our target is not to compute the perfect decision tree at each step. Instead, we introduce a new target called $\beps$-feasibility. Roughly speaking, a decision tree is $\beps$-feasibility if the Gini gain of each of its splits is not too far from the Gini gain of the optimal split.
 
 To clarify this definition, we note $S^+_{v, j, a}$ and $S^-_{v, j, a}$ the left and right subsets of a training set $S_v$ when splitting along the feature $j$ and with threshold or category $a$. It means that if the feature $j$ is numerical, then:
 \begin{equation}
@@ -236,10 +236,6 @@ For any fixed pruning thresholds $k,h$ we say that a fully dynamic decision tree
 %When $k=1$ and $h=\infty$ and $\epsThr=\epsApx$, $\beps$-feasibility reduces to the following condition: if $g(S_v)=0$ then $v$ is a leaf, and if $g(S_v) \ge \epsThr$ then $v$ is internal and use an $\epsThr$-optimal split. This is the $\epsilon$-optimality condition of Section~\ref{sec:intro} used by incremental algorithms such as Hoeffding trees and EFDT.
 \todo{relevant to add this part ? (See with SotA)}
 
-% \begin{theorem}\label{thm:main_UB}
-% Let $\scX=\R^d$, let $k,h$ be positive integers, let $\epsThr,\epsApx \in (0,1]$, and let $0 < \epsilon < \min\!\big(\frac{1}{k+1},\frac{\epsThr}{5},\frac{\epsApx}{12.5}\big)$. There is a deterministic $(\epsThr,\epsApx)$-feasible fully dynamic decision tree algorithm with pruning thresholds $k,h$ that has query time $O(h^*)$, uses space $O(nd)$, and has amortized running time per update $O\big(\frac{d h^{\!*} \log^2 n}{ \epsilon}\big) = O\big(\frac{d \log^3 n}{\epsilon^2}\big)$, where $h^*\le h$ and $n$ are respectively the maximum height of the tree and the maximum size of the active set at any time.
-% \end{theorem}
-\todo{Move that theorem after the algo presentation}
 \section{The Fully Dynamic Decision Tree algorithm}
 %\subsection{Introduction}\label{sec:intro}
 
@@ -293,9 +289,9 @@ We now proceed to the rigorous presentation of the algorithm. The algorithm is c
 
 This procedure is shown as Algorithm \ref{alg:fudy_build}. It is an implementation of the Hunt's algorithm presented as algorithm \ref{alg:meta_decision_tree} in section \ref{sec:decision_trees_general}. $S_r$ is the training set. $\eta$ is the current depth of the tree. If \AlgoBuild{} is called to build the tree from the root, then $\eta=1$. The procedure is called first at the initialization of the tree, and then by the \AlgoUpdate{} procedure when needed.
 
-The constants $k$ and $\frac{\alpha}{2}$ are respectively the number of points and the Gini score of the training set of a node below which the node must be a leaf. The constant $h$ is the maximal depth of the tree.
+The constants $k$ and $\frac{\alpha}{2}$ are respectively the number of points and the Gini score of the training set of a node, below which the node must be a leaf. The constant $h$ is the maximal depth of the tree.
 
-First, a new vertex $r$ of the tree is created. The variables $c(r)$ is the number of updates the node has received since last built and is initialize at $0$. The variable $s(r)$ that is the size of the training set of the node when last built and is initialized at the size of $S_r$. Then, the procedure checks if any of the constants $k$, $\frac{\alpha}{2}$ and $h$ is reached (line \ref{alg_line:fudy_build__if_is_leaf}). If so, the node is a leaf and so a tree of height $1$ is returned. If not, the best splitting criterion $(j,a)$ is determined (line \ref{alg_line:fudy_build__choose_criterion}). Finally, two children subtrees are built from the training subsets $S^+_{r,j,a}$ and $S^-_{r,j,a}$ and set as left and right children of $r$.
+First, a new vertex $r$ of the tree is created. The variables $c(r)$ are the number of updates the node has received since last built and is initialized at $0$. The variable $s(r)$ that is the size of the training set of the node when last built and is initialized at the size of $S_r$. Then, the procedure checks if any of the constants $k$, $\frac{\alpha}{2}$ and $h$ is reached (line \ref{alg_line:fudy_build__if_is_leaf}). If so, the node is a leaf and so a tree of height $1$ is returned. If not, the best splitting criterion $(j,a)$ is determined (line \ref{alg_line:fudy_build__choose_criterion}). Finally, two children subtrees are built from the training subsets $S^+_{r,j,a}$ and $S^-_{r,j,a}$ and set as left and right children of $r$.
 
 \begin{theorem}\label{th:build_time_complexity}
     The \AlgoBuild{} procedure can be implemented to run in time \begin{equation*}
@@ -389,7 +385,7 @@ First, a new vertex $r$ of the tree is created. The variables $c(r)$ is the numb
 \end{algorithmic}
 \end{algorithm}
 
-The \AlgoUpdate{} procedure is presented in algorithm \ref{alg:fudy_update}. $T$ is the decision tree before the update, $(x,y)$ is the training point to insert or delete and $o$ is the type of update, either \ins{} or \del{}. The constant $\eps \in \realset^+$ is a parameter that decides how rarely the nodes need to be rebuilt. The theorem \ref{th:fudy_is_epsfeasible} will gives the value of $\eps$ for \algo{} to be $\beps$-feasible.
+The \AlgoUpdate{} procedure is presented in algorithm \ref{alg:fudy_update}. $T$ is the decision tree before the update, $(x,y)$ is the training point to insert or delete and $o$ is the type of update, either \ins{} or \del{}. The constant $\eps \in \realset^+$ is a parameter that decides how rarely the nodes need to be rebuilt. The theorem \ref{th:fudy_is_epsfeasible} will give the value of $\eps$ for \algo{} to be $\beps$-feasible.
 
 The first step of this algorithm is to direct the new training point from the root to the relevant leaf wrt. the splitting criteria of the nodes. This gives the path $P_{v_{\kappa_\ell}}$. Then the training set of each node is updated. This may lead to a change in the label of the leaf $v_{\kappa_\ell}$ if the label of the inserted point becomes the majority label, or if the deleted point belongs to the majority label. If so, the label is updated at line \ref{alg_line:fudy_update__update_label}.
 
@@ -398,20 +394,20 @@ Then for all vertices in the path from the root to the leaf, its count of update
 \begin{theorem}\label{th:fudy_is_epsfeasible}
     If $\eps=\min\left(\frac{1}{k+1}, \frac{\alpha}{6-\frac{2}{|\scY|}}, \frac{\beta}{13 - \frac{1}{|\scY|}}\right)$, then the tree initialized with \AlgoBuild{} and updated with \AlgoUpdate{} is $(\alpha, \beta)$-feasible, with pruning thresholds $(k, h)$
 \end{theorem}
-The value of $\eps$ in this theorem depends on $|\scY|$ to be as tight as possible. However if $|\scY|$ is unknown or if we want to unify the value of $\eps$, it is possible to use $\eps=\min\left(\frac{1}{k+1}, \frac{\alpha}{6}, \frac{\beta}{13}\right)$ with the same guarantees and only a slight decrease in efficiency.
+The value of $\eps$ in this theorem depends on $|\scY|$ to be as tight as possible. However, if $|\scY|$ is unknown or if we want to unify the value of $\eps$, it is possible to use $\eps=\min\left(\frac{1}{k+1}, \frac{\alpha}{6}, \frac{\beta}{13}\right)$ with the same guarantees and only a slight decrease in efficiency.
 \begin{proof}
     First, we see that \AlgoBuild{} builds a $\beps$-feasible tree. 
     
     Let's suppose that, after calling \AlgoUpdate{}, a vertex $v$ does not match the conditions for the tree to be $\beps$-feasible. We note $S$ the training set of that vertex at that time, and $S_0$ the training set of that vertex at the last time \AlgoBuild{} was used on it. We see that $c(v) \geq \ED(S_0, S)$ and so $\frac{c(v)}{s(v)} \geq \EDR(S_0, S)$. We also know from line \ref{alg_line:fudy_update__if_need_to_recompute} of \AlgoUpdate{} that   $\frac{c(v)}{s(v)} \leq \eps$ because \AlgoBuild{} would have been called on $v$ or one of its ancestors otherwise. Therefore, we will show that any condition on $v$ that would cause the tree to not be $\beps$-feasible would also cause $\EDR(S_0, S) > \eps$. From that, we will deduce that such vertex can not exist and that the tree is $\beps$-feasible. We go through all the $\beps$-feasibility conditions that could be broken by $v$.
 
     \begin{paragraph}{$v$ should be a leaf}
-        This condition applies if $|S|\leq k$, $g(S) = 0$ or $\text{depth}_T(v) \geq h$. It is broken if $v$ is an internal node. \AlgoUpdate{} does never change the depth of a vertex or change it from leaf to internal or vice-versa without calling \AlgoBuild{}. It is therefore impossible that $\text{depth}_T(v) \geq h$ and that $v$ is an internal node.
+        This condition applies if $|S|\leq k$, $g(S) = 0$ or $\text{depth}_T(v) \geq h$. It is broken if $v$ is an internal node. \AlgoUpdate{} does never change the depth of a vertex or change it from leaf to internal or vice versa without calling \AlgoBuild{}. It is therefore impossible that $\text{depth}_T(v) \geq h$ and that $v$ is an internal node.
 
-        If $v$ is an internal node, then it means that $|S_0| > k$ and $g(S_0) > \frac{\alpha}{2}$. If $|S| \leq k$ then $\EDR(S_0, S) \geq \frac{1}{k+1} \geq \eps$. Else we need $g(S) = 0 $ for the condition to apply. This means that $g(S_0) - g(S) \geq \frac{\alpha}{2}$ and thanks to theorem \ref{th:smoothness}, this means that $\EDR(S_0, S) \geq \frac{\alpha}{6 - \frac{2}{|\scY|}} \geq \eps$.
+        If $v$ is an internal node, then it means that $|S_0| > k$ and $g(S_0) > \frac{\alpha}{2}$. If $|S| \leq k$ then $\EDR(S_0, S) \geq \frac{1}{k+1} \geq \eps$. Else, we need $g(S) = 0 $ for the condition to apply. This means that $g(S_0) - g(S) \geq \frac{\alpha}{2}$ and thanks to theorem \ref{th:smoothness}, this means that $\EDR(S_0, S) \geq \frac{\alpha}{6 - \frac{2}{|\scY|}} \geq \eps$.
     \end{paragraph}
 
     \begin{paragraph}{$v$ should be an internal node}
-        This condition applies if $|S| > k$, $g(S)\geq \alpha$ and $\text{depth}_T(v) < h$. It is broken if $v$ is a leaf. For $v$ to be a leaf, we need either $|S_0|\leq k$, $g(S_0) = 0$ or $\text{depth}_T(v) = h$. Since the depth of $v$ can not have change since it was last built, we can disregard the option that $\text{depth}_T(v) = h$. With a similar reasoning as the previous condition, we get that if $|S_0| \leq k$ then $\EDR(S_0, S) \geq \frac{1}{k+1} \geq \eps$, and if $g(S_0) = 0$ then $\EDR(S_0, S) \geq \frac{\alpha}{6 - \frac{2}{|\scY|}} \geq \eps$.
+        This condition applies if $|S| > k$, $g(S)\geq \alpha$ and $\text{depth}_T(v) < h$. It is broken if $v$ is a leaf. For $v$ to be a leaf, we need either $|S_0|\leq k$, $g(S_0) = 0$ or $\text{depth}_T(v) = h$. Since the depth of $v$ can not have changed since it was last built, we can disregard the option that $\text{depth}_T(v) = h$. With a similar reasoning as the previous condition, we get that if $|S_0| \leq k$ then $\EDR(S_0, S) \geq \frac{1}{k+1} \geq \eps$, and if $g(S_0) = 0$ then $\EDR(S_0, S) \geq \frac{\alpha}{6 - \frac{2}{|\scY|}} \geq \eps$.
     \end{paragraph}
 
     \begin{paragraph}{The Gini gain should be close to the optimal}
@@ -430,10 +426,10 @@ For each vertex $v$ of a tree, we note $s^t(v)$ the size of the training set of 
 Let $T_t$ be a decision tree built by the \AlgoBuild{} procedure and then updated through $t \geq 0$ calls to the \AlgoUpdate{} procedure. Then for all vertex $v$ of the tree, $(1-\epsilon) \cdot s^t(v) \leq |S^t_v| \leq (1+\epsilon) \cdot  s^t(v)$.
 \end{lemma}
 \begin{lemma}\label{lem:height_bound}
-Let $T$ be a decision tree built on a training set $S$. If every vertex $v$ uses a split with gain at least $\gamma > 0$ w.r.t.\ $S_v$, then $T$ has height  $\scO \left(\frac{\log |S|}{\gamma}  \right)  $.
+Let $T$ be a decision tree built on a training set $S$. If every vertex $v$ uses a split with a gain at least $\gamma > 0$ w.r.t.\ $S_v$, then $T$ has height  $\scO \left(\frac{\log |S|}{\gamma}  \right)  $.
 \end{lemma}
 \begin{proof}[Proof of lemma \ref{lem:current_size_bount}]
-    We know that $c^t(v) \geq \left||S^t_v| - s^t(v)\right|$, with $c^t(v)$ the number of updates on the training set of $v$ since it was last built. But we also know from line \ref{alg_line:fudy_update__if_need_to_recompute} of algorithm \ref{alg:fudy_update} that at the end of any call of \AlgoUpdate{}, $c^t(v) \leq \eps s^t(v)$. Therefore we have
+    We know that $c^t(v) \geq \left||S^t_v| - s^t(v)\right|$, with $c^t(v)$ the number of updates to the training set of $v$ since it was last built. But we also know from line \ref{alg_line:fudy_update__if_need_to_recompute} of algorithm \ref{alg:fudy_update} that at the end of any call of \AlgoUpdate{}, $c^t(v) \leq \eps s^t(v)$. Therefore, we have
     \begin{equation*}
         \left||S^t_v| - s^t(v)\right| \leq \eps s^t(v) 
     \end{equation*}
@@ -453,12 +449,19 @@ Let $T$ be a decision tree built on a training set $S$. If every vertex $v$ uses
     \end{align*}
     Therefore we know that $\left(4 - \frac{1}{|\scY|}\right)|S_u| \geq \gamma |S_v|$ and so $|S_u| \geq \frac{\gamma}{4} |S_v|$. But then $|S_z|\leq \frac{3\gamma}{4} |S_v|$ and by the same reasoning we can find the same result on $S_u$.
 
-    Hence the size of the training set of any vertex at depth $\eta$ is in $\scO(\gamma^\eta |S|)$. But since the size of the training set of a vertex can not be below $1$, then the size of the tree is in $\scO(\frac{\log |S|}{\gamma})$.
+    Hence, the size of the training set of any vertex at depth $\eta$ is in $\scO(\gamma^\eta |S|)$. But since the size of the training set of a vertex can not be below $1$, then the size of the tree is in $\scO(\frac{\log |S|}{\gamma})$.
 \end{proof}
 
 We can now prove the performances theorem:
-\begin{theorem}
-    The \AlgoUpdate{} algorithm can be implemented to run in time \todo{complete}
+\begin{theorem}\label{th:update_time_complexity}
+    If $T$ is a tree built from \AlgoBuild{} and not updated since. The \AlgoUpdate{} procedure can be implemented so that $\scT$ invocations of \AlgoUpdate{} on $T$ run in time
+    \begin{equation}\label{eq:time_complexity_update_num}
+        \scO\left(hd\frac{\log(n)}{\eps}(\log(n) + |\scY|)\right) = \scO\left(d\frac{\log^2(n)}{\eps^2}(\log(n) + |\scY|)\right)
+    \end{equation}
+    If all the features are categorical, the time is reduced to
+    \begin{equation}\label{eq:time_complexity_update_cat}
+        \scO\left(hd\frac{\log(n)}{\eps}|\scY|\right) = \scO\left(d\frac{\log^2(n)}{\eps^2} |\scY|\right)
+    \end{equation}
 \end{theorem}
 \begin{proof}
     We note $\text{cost}(\scT)$ the running time of $\scT$ invocations of \AlgoUpdate{}.
@@ -481,214 +484,93 @@ We can now prove the performances theorem:
     \end{align*}
 
     We now have
-    \begin{equation}
+    \begin{equation}\label{eq:first_estimate_bound_efficiency}
         \begin{split}
             \text{cost}(\scT) \leq &\scO(\scT(h + d + \log(n) + |\scY|))\\
             & + \sum_{t \in B} \scO\left(hd\frac{c^t(v_{b(t)})}{\eps}(\log(n) + |\scY|)\right)
         \end{split}
     \end{equation}
 
-    We consider an invocation $\t$ of \AlgoUpdate{} and $(x,y)$ the training point that is inserted or deleted at that time. $P_x$ is the path of the point in the tree, i.e. the set of nodes affected by the update. We note $C^t = \{v_{k_1}, \dots v_{k_M}\} \subseteq P_x$ the set of nodes from $P_x$ such that \AlgoBuild{}$(S^{t_i}_{v_{k_i}}, \text{depth}(v_{k_i}))$ is executed at some time $t_i \geq t$, i.e. the node itself is rebuilt at some point in time. We suppose that 
+    We consider an invocation $t$ of \AlgoUpdate{} and $(x,y)$ the training point that is inserted or deleted at that time. $P_x$ is the path of the point in the tree, i.e. the set of nodes affected by the update. We note $C^t = \{v_{k_1}, \dots v_{k_M}\} \subseteq P_x$ the set of nodes from $P_x$ such that \AlgoBuild{}$(S^{t_i}_{v_{k_i}}, \text{depth}(v_{k_i}))$ is executed at some time $t_i \geq t$, i.e. the node itself is rebuilt at some point in time. We suppose that $C^t$ is sorted so that the highest nodes come first. In other words, $v_{k_1}$ is an ancestor of every other node of $C^t$, $v_{k_2}$ is an ancestor of every other nodes except $v_{k_1}$ and so on.
+    
+    We see that if $i<j$ and $t_i$ and $t_j$ are the time at which $v_{k_i}$ and $v_{k_j}$ respectively will be recomputed, then $t_i > t_j$ because otherwise $v_{k_j}$ would be deleted when $v_{k_i}$ would be rebuilt and would not exist at time $t_j$ to be rebuilt. We also see that $\forall i \in [M-1]$, we have $\lceil\log(s^{t_{i+1}}(v_{k_i}))\rceil > \lceil\log(s^{t_{i+1}}(v_{k_{i+1}}))\rceil$, because otherwise $v_{k_i}$ would be rebuilt at time $t_{i+1}$, and $v_{k_{i+1}}$ would be deleted at that time and never rebuilt, because of line \ref{alg_line:fudy_update__recompute_thresh} of algorithm \ref{alg:fudy_update}. Since $t_{i} > t_{i+1}$ neither $v_{k_i}$ nor $v_{k_{i+1}}$ would be rebuilt between time $t$ and $t_i$, and so
+    \begin{equation*}
+        \forall i \in [M-1] : \lceil\log(s^{t}(v_{k_i}))\rceil > \lceil\log(s^{t}(v_{k_{i+1}}))\rceil
+    \end{equation*}
+    We deduce that 
+    \begin{equation}
+        \forall t \in \scT: |C^t| \leq \lceil\log(n)\rceil
+    \end{equation}
+    We see that $\forall t \in B$, $c^t(v_{b(t)})$ equals the number of times it was in a set $C^t$ since it was last built. Since the sets $C^t$ contain by design only nodes that will be built at some time $t\in B$, we have:
+    \begin{align*}
+        \sum_{t \in B} c^t(v_{b(t)}) &= \sum_{t = 1}^\scT |C^t|\\
+        & \leq \sum_{t \in B}|C^t|\\
+        & \in \scO(\scT \log(n))
+    \end{align*}
+    We combine this result with equation (\ref{eq:first_estimate_bound_efficiency}) and we get
+    \begin{equation*}
+        \text{cost}(\scT) \leq \scO\left(hd\frac{\log(n)}{\eps}(\log(n) + |\scY|)\right)
+    \end{equation*}
+    We conclude this proof for numerical features by using lemma \ref{lem:height_bound}.
+
+    The proof for categorical features is the same, except that we use the specific result for categorical features of theorem \ref{th:build_time_complexity} in equation \ref{eq:first_estimate_bound_efficiency}.
 \end{proof}
 
-% \subsection{A Fully Dynamic Decision Tree Algorithm}\label{sec:dyn}
+The amortized cost of \AlgoUpdate{} is obtained by dividing equations (\ref{eq:time_complexity_update_num}) and (\ref{eq:time_complexity_update_cat}) by $\scT$. This is because, even if the tree has been updated before, it will be rebuilt entirely after at most $n$ updates. Therefore, theorem \ref{th:update_time_complexity} applies at least to the last $\scT - n$ updates and, since the first $n$ updates are computed in finite time, then their computation time has no impact on the amortized cost.
 
-% %This section presents \algo{} (Fully Dynamic Amortized Decision Tree).  As argued in Section~\todo{set ref}, one of our goals is to ensure that every node of the tree uses a split whose gain is within an additive $\eps$ of the maximum. \algo{} satisfies a stricter guarantee, called $\beps$-feasibility, which allows to also prune the tree at some height or at leaves with few examples. 
+\subsection{Experimental settings}
+We compare \algo{} against two state-of-the-art algorithms for incremental decision tree learning, EFDT \cite{Manapragada2018_EFDT} and HAT \cite{bifet2009_AdaptiveLearning}, using the MOA software \cite{Bifet2010_MOA}. Similarly to \algo{}, EFDT and HAT aim at keeping $\epsilon$-optimal splits, which they do with high probability when the examples are i.i.d. from a distribution.\todo{Recheck after literature survey}. Our goal is to show that \algo{} performs at least similarly at these competitors in the incremental setting. We also show the time performance of \algo{} in a fully-dynamic setting.
 
-% \begin{theorem}\label{thm:main_UB}
-% Let $\scX=\R^d$, let $k,h$ be positive integers, let $\epsThr,\epsApx \in (0,1]$, and let $0 < \epsilon < \min\!\big(\frac{1}{k+1},\frac{\epsThr}{5},\frac{\epsApx}{12.5}\big)$. There is a deterministic $(\epsThr,\epsApx)$-feasible fully dynamic decision tree algorithm with pruning thresholds $k,h$ that has query time $O(h^*)$, uses space $O(nd)$, and has amortized running time per update $O\big(\frac{d h^{\!*} \log^2 n}{ \epsilon}\big) = O\big(\frac{d \log^3 n}{\epsilon^2}\big)$, where $h^*\le h$ and $n$ are respectively the maximum height of the tree and the maximum size of the active set at any time.
-% \end{theorem}
+The results for HAT are not given as they are constantly at most as good as EFDT.
 
+\begin{paragraph}{Settings.}
+We implemented \algo{} in C++~\footnote{\url{https://github.com/GDamay/dynamic-tree}}. We conducted all experiments on an Ubuntu 20.04.2 LTS server equipped with 144 Intel(R) Xeon(R) Gold 6154 @ 3.00GHz CPUs and 264 GB of RAM. We observe that the algorithms have not been implemented in the same programming language, which limits the relevance of the runtime comparison.
+\end{paragraph}
 
-% Theorem~\ref{thm:main_UB} can be improved for categorical features, that is, when $\scX=A^d$ for some fixed finite set $A$; this includes the case of binary features, $A=\{0,1\}$. 
-% \begin{theorem}\label{thm:categorical_ub}
-% If $\scX=A^d$ for a finite set $A$ then the amortized time bound of Theorem~\ref{thm:main_UB} can be improved to $O\big(\frac{d \log^2 n}{\epsilon}\big)$.
-% \end{theorem}
-
-% The rest of this section describes \algo{} and proves Theorem~\ref{thm:main_UB}, except for the $\beps$-feasibility part, which is proven in the full version, as is Theorem~\ref{thm:categorical_ub}.
-% Before moving on, let us give some intuition on \algo{}.
-% %For simplicity, we assume the values $k,h$ and $\epsilon$ appearing in Theorem~\ref{thm:main_UB} are known.
-% The algorithm consists of the two routines \AlgoUpdate{} and \AlgoBuild{} below. Those routines maintain a decision tree $T$, and, for each leaf $v$ of $T$, dictionaries $D_v$ and $D_v^L$ storing respectively the multiset $S_v$ associated to $v$ and the frequency histogram of the labels of $S_v$. At every insertion or deletion of an example $(x,v)$, \AlgoUpdate{} computes the leaf $v=v(x)$ where $x$ ends up, and updates $D_v$ and $D^L_v$ consequently, see line~\ref{line:update_dicts}. Then, \AlgoUpdate{} checks if any subtree should be rebuilt. To this end, for every vertex $u \in V(T)$ it maintains two counters, $s(u)$ and $c(u)$, storing respectively the size of the multiset on which the subtree $T_u$ was rebuilt the last time and the number of updates that reached $u$ since that time. As soon as $c(u) > \epsilon \cdot s(u)$ for some $u \in V(T)$, \AlgoUpdate{} invokes \AlgoBuild{} to rebuild an appropriately chosen supertree of $T_u$.
+\begin{paragraph}{Datasets.} Our datasets are shown in Table~\ref{tab:datasets_table}. We have chosen them among standard datasets for classification; some of them, such as INSECTS, feature the so-called concept drift. Not all datasets have binary labels. Because the experiments have been performed on a first version of the algorithm that worked only with binary labels, we adapted the datasets to have only two labels. For the INSECTS datasets, we assigned label $1$ to  the union of \texttt{male} classes. For every other dataset, we assigned label $1$ to the majority class. The INSECTS dataset contains 5 sets of examples, each representing a different way of introducing concept drift. 
+\end{paragraph}
 
 
+\begin{paragraph}{Input models.} We consider two input models. Let $(x_1,y_1), \dots ,(x_T,y_T)$ be the sequence of examples as given by the dataset at hand (typically in chronological order). The simplest model is one in which data are inserted in the order of the dataset, aka \emph{incremental} model. Formally, a first batch of $g$ data, called \define{grace period}, is provided to initialize the model. Then at every $t \in [g+1, T]$ the algorithm receives $\ins(x_t,y_t)$. This model is supported by all algorithms (\algo{}, EFDT, HAT), hence we use it to compare them against each other. Because the data feature concept drift that EFDT and HAT claim to handle and we don't, \algo{} is tested in that setting with a sliding window. This means that every time it receives an example for insertion, the oldest example of its training set is subsequently deleted.
 
+The next model involves deletions and thus is supported only by \algo{}. It is the \emph{random update} model (RU): for all $t \in [T]$, with probability $\nicefrac12$ the algorithm receives $\ins(x,y)$ where $(x, y)$ is a new example chosen uniformly at random from the remaining training set, and with probability $\nicefrac12$ it receives $\del(x,y)$ where $(x,y)$ is chosen uniformly at random from the active set $S^t$. This last model will help check the performances of \algo{} in a fully-dynamic setting. Its F1-score performances are not expected to vary with $\eps$. 
 
-% %We now prove the correctness of \AlgoUpdate{}.
+In all cases, the classification is \emph{online}, i.e. before performing any insertion $\ins(x,y)$, the example $(x,y)$ is assigned a label $\bar{y}$ by the decision tree, which is used for the evaluation of the F1-score. 
+\end{paragraph}
 
-% %### to add it back or supplemental material ###
-% %\begin{proof}[Sketch of the proof]
-% %By construction, \AlgoBuild{}($S$) returns a tree that is $\beps$-feasible w.r.t.\ $S$, hence the first nonempty tree obtained throughout the sequence of update requests is $\beps$-feasible. Assume then the tree $(T_{\tau},R_{\tau},L_{\tau})$ computed after $1 \le \tau < t$ updates is $\beps$-feasible w.r.t.\ $S^{\tau}$. Suppose also that $(T_{\tau},R_{\tau},L_{\tau})$ is not feasible w.r.t.\ $S^{\tau+1}$. Hence some of the conditions of feasibility are violated at some $v \in T_{\tau+1}$. By the smoothness of Gini index and Gini gain (Lemma~\ref{lem:smooth_gini} and Lemma~\ref{lem:smooth_gain}), this requires $\EDR(S^{\tau+1})_v,(S^{\tau})_v) \ge \epsilon$ where $\epsilon$ is a function of $k,\epsApx,\epsThr,\epsilon_3$.
-% %\end{proof}
-% %### to add it back or supplemental material ###
-% %and is deferred to Lemma~\ref{lem:update_correct} in the appendix.
-% Let us move to the bounds of Theorem~\ref{thm:main_UB}. Proving those bounds requires some care in charging the cost of rebuilding the subtrees to the update requests. To this end, we need the following two simple results proven in the full version. From now on, by ``time $t$'' we mean the $t$-th invocation of \AlgoUpdate{}.
-% \begin{lemma}\label{lem:counter}
-% Let $(T,\Splits,L)$ be the result of $t \ge 0$ invocations of \AlgoUpdate{}. Then $(1-\epsilon) \cdot s^t(v) \leq |S^t_v| \leq (1+\epsilon) \cdot  s^t(v)$ for every $v \in V(T)$, where $s^t(v)$ is the value of $s(v)$ at time $t$.% (as defined in line~\ref{line:sv} of \AlgoBuild{}). 
-% \end{lemma}
-% \begin{lemma}\label{lem:log_height}
-% Let $(T,\Splits,L)$ be a decision tree built on a sequence $S$. If every $v \in V(T)$ uses a split with gain at least $\gamma > 0$ w.r.t.\ $S_v$, then $T$ has height  $\scO \left( \log |S|  \;/\; {\gamma}  \right)  $. %$\scO(\log_{1+\gamma} |S|)$.
-% \end{lemma}
-% We can now prove:
-% %(Lemma~\ref{lem:counter} and Lemma~\ref{lem:log_height}) from the full version~\cite{}.
-% \begin{lemma}\label{lem:amtime}
-% \AlgoBuild{} and \AlgoUpdate{} can be implemented so that any $\mathcal{T}$ invocations of \AlgoUpdate{} take time 
-% \begin{align}
-%     O\!\left(\frac{\scT \cdot d \cdot h \cdot (\log n)^2}{\epsilon}\right) = O\!\left(\frac{\scT \cdot d \cdot (\log n)^3}{\epsilon^2}\right)
-% \end{align}
-% \end{lemma}
-% \begin{proof}%\iffalse
+\begin{paragraph}{Metrics.}
+    The results of the models are evaluated using the F1-score presented in section \ref{subsec:intro_class_metrics}. 
+\end{paragraph} 
 
-% First we describe the data structures and the time taken by the basic operations of \AlgoBuild{} and \AlgoUpdate{}. Using a self-balancing tree for $D_v$ we ensure search, insert, update, and deletion in time $O(d \log N)$, and enumeration in time $O(d N)$ --- recall that every element takes $O(d)$ bits --- where $N$ is the number of distinct entries in the data structure. The same for $D_v^L$, which has at most $2$ distinct entries. Thus the block at line~\ref{line:if_split} of \AlgoBuild{}$(S,i)$ runs in time $\scO(d|S| \log |S|)$.
-
-% If instead the condition at line~\ref{line:if_split} fails, then \AlgoBuild{} must compute $(j,a)$. To this end one proceeds as follows. First, for each $j \in [d]$ one computes the projection $S_{|j}$ of $S$ on the $j$-th feature (keeping the label as well). Then one sorts $S_{|j}$ according to the feature values in time $\scO(|S| \log |S|)$. Next, one scans $S_{|j}$ and finds the threshold $t^*$ for which a split on $j$ yields maximum gain in time $\scO(|S|)$. To this end one just needs to keep label counts for the subsequence formed by the first $i$ examples in $S_{|j}$, so that the gain a split at that point would yield can be computed in time $\scO(1)$ from the counts of the first $(i-1)$ examples. 
-% Summarizing, one can compute the optimal split $(j,a)$ in time $\scO(d |S| \log |S|)$. Since $|S[x_j \le a]|+|S[x_j > a]|=|S|$, it follows that \AlgoBuild{}$(S,i)$ always runs in time $O(d |S| \log |S| (h + \log |S|))$, which is in $O(d |S| \log n (h + \log n))$ since $|S| \le n$ by definition of $n$. For \AlgoUpdate{}, computing $ v_{\kappa_1},\dots, v_{\kappa_\ell} $ takes time $O(h)$, while performing any \ins\ or \del\ operation on $S_{v_{\kappa_\ell}}$ takes time $O(d \log |S^t|) = O(d \log n)$. Finally, computing the input $S_{v_{\kappa_j}}$ of \AlgoBuild{} takes time $O(|S_{v_{\kappa_j}}|)$ by visiting $T_{v_{\kappa_j}}$ and listing the data structures at its leaves.
-% %\fi
-
-% Now, we bound the total time taken by $\scT$ successive invocations of \AlgoUpdate{}. Let $B = \{ t \in [\mathcal{T}\,]: \AlgoBuild{} \text{ is invoked at time } t\}$. For every $t \in B$ let $b(t)$ be such that $v_{b(t)}$ is the vertex $v_{\kappa_j}$ on which \AlgoBuild{} is invoked. The total running time $\cost(\mathcal T)$ of the $\mathcal T$ invocations satisfies:
-% %\begin{align}
-% %    \cost(\mathcal T) \le \sum_{t=1}^{\mathcal T} O(h + d \log n) + \sum_{t\in B} O\left((h+\log n)\cdot d\cdot |S^t(v_{b(t)})|\right) \label{eq:total_cost} 
-% %\end{align}
-% \begin{align}
-%     \cost(\mathcal T) &\le \sum_{t=1}^{\mathcal T} O(h + d \log n)\nonumber \\&~~+ \sum_{t\in B} O\!\left((h+\log n) \cdot \log n \cdot d\cdot |S^t_{v_{b(t)}}|\right) \label{eq:total_cost} 
-% \end{align}
-% The first term contributes $O(\scT (h+d \log n))$. We now bound the second term. For every $t \in B$ consider the $t$-th execution of \AlgoUpdate{}.
-% Let $s^t(v)$ be the value of $s(v)$ right before \AlgoBuild{} is invoked, and $v_{i(t)}$ be the vertex that satisfies the condition at line~\ref{line:if_c_eps_s} of \AlgoUpdate{}. Note that $v_{i(t)}$ is by construction a descendant of $v_{b(t)}$. Finally, for $v \in \{v_{b(t)},v_{i(t)}\}$ let $c^t({v})$ and $s^t(v)$ be the values of $c(v)$ and $s(v)$ right after line~\ref{line:inc_c} is executed with $v_{\kappa_i}=v$. Then:
-% \begin{align}
-% \sum_{t \in B}  |S^t_{v_{b(t)}}|
-% & \leq   2 \cdot \sum_ {t \in B}  s^t(v_{b(t)}) \label{eq:2} \\
-% & \leq  4 \cdot \sum_ {t \in B}  s^t(v_{i(t)}) \label{eq:3} \\
-% & \leq  \frac{4}{\epsilon} \cdot \sum_ {t \in B}  c^t(v_{i(t)}) \label{eq:4} \\
-% & \leq  \frac{4}{\epsilon} \cdot \sum_ {t \in B}  c^{t}(v_{b(t)}) \label{eq:5}
-% \end{align}
-% where~\eqref{eq:2} follows from Lemma~\ref{lem:counter} noting that $\epsilon \le 1$,~\eqref{eq:3} and~\eqref{eq:4} follow respectively from lines~\ref{line:hat_s}-\ref{line:min_j} and line~\ref{line:if_c_eps_s} of \AlgoUpdate{}, and~\eqref{eq:5} follows from the fact that $c^t(v) \leq c^t(u)$ if $v$ is a descendant of $u$. Now observe that at every time $t$ at most $h$ counters $c(v)$ are increased by one unit; therefore, 
-% \begin{equation}
-% \sum_{t\in B} c^t({v_{b(t)}}) \leq |B| \cdot h \leq \mathcal{T} \cdot h
-% \end{equation}
-% We conclude that $\sum_{t \in B}  |S^t_{v_{b(t)}}| \le \mathcal{T} \frac{4 h}{\epsilon} $. Plugging this bound in~\eqref{eq:total_cost} and noting that the second sum dominates, we obtain:
-% \begin{equation}\label{eq:cost_1}
-%     \cost(\mathcal T) = O\!\left(\scT \cdot (h + \log n) \cdot \log n \cdot d \cdot  \frac{h}{\epsilon} \right) 
-% \end{equation}
-% Next we prove a second bound on $\cost(\mathcal T)$; the final bound comes from taking the minimum.
-
-% %\begin{equation}
-% %    \cost(\mathcal T) = O\left((h + \log n) \cdot d \cdot \frac{(1+\epsilon)^2}{\epsilon} \cdot h \cdot \scT \right)
-% %\end{equation}
-% %which by rearranging terms proves the first $\min$ term in the the amortized upper bound.
-
-% \iffalse
-% \begin{equation}
-% h \cdot d \cdot \frac{(1+\epsilon)^2}{\epsilon} \cdot h \cdot \mathcal{T} = h^2 \cdot d \cdot \frac{(1+\epsilon)^2}{\epsilon}  \cdot \mathcal{T}
-% \end{equation}
-% \fi
-
-
-% Consider the $t$-th execution of \AlgoUpdate{}, let $(x,y)$ the example that is inserted or removed, and recall that $P_{v(x)}$ is the path from the root of the tree to the leaf $v(x)$ determined by $x$. Let $C^{t} = \{v_{k_1} ,\dots, v_{k_M}\}$ be the set of all vertices of $P_{v(x)}$ such that \AlgoBuild{}$(S^{t_i}_{v_{k_i}}, i)$ is executed at some time $t_i \geq t$.
-
-% If $C^t \ne \emptyset$ then we call $C^t$ a \emph{charging set}. We wish to bound the maximum size of $C^t$, which might be seen as the number of \AlgoBuild{} operations performed per update. We shall prove the following two properties:
-% \begin{itemize}
-% %\item[P1:]  $\forall t \in [\mathcal{T}]$, $|C^t| \leq \lceil \log_{1+\epsilon} ( n )  \rceil$
-
-% \item[P1:]  $\forall t \in [\mathcal{T}]$, $|C^t| \leq \lceil \log ( n )  \rceil$
-
-% %\item[P2:]  $\forall t \in [T]$, there are at least $c^t(u_t)$ charging paths containing $u_t$;
-% \item[P2:] $\forall t \in B$, $c^t(v_{b(t)}) \leq \sum_{\tau=1}^{t} \Ind_{v_{b(t)} \in C^{\tau}}$
-% \end{itemize}
-% We start with P1. We argue that there cannot be distinct nodes $v_{k_i}$ and $v_{k_j}$ in $C^{t}$ such that $ \lceil \log s^{\tau}(v_{k_i}) \rceil   = \lceil \log s^{\tau}(v_{k_j}) \rceil$ for any $\tau \in [t_i,t_j]$.
-% %($t_i < t_j$, w.l.g.).
-% %In other words, $s^{\tau}(v_{k_i})$ and $s^{\tau}(v_{k_j})$ cannot share the same power of $2$.
-% Suppose $\tau=t_i$; $v_{k_i}$ cannot be an ancestor of $v_{k_j}$, for otherwise $v_{k_j}$ would not be connected to the root node at time $t_j$ and \AlgoBuild{}$(S^{t_j}_{v_{k_j}},j)$ would not be executed. If $v_{k_j}$ is an ancestor of $v_{k_i}$, \AlgoUpdate{} would not have performed \AlgoBuild{}$(S^{t_i}_{ v_{k_i}},i)$ at time $t_i$, in that, there is at least one other node ($v_{k_j}$) which is closer to the root and that would have been selected instead (line~\ref{line:min_j} of \AlgoUpdate{}). The claim holds for every $\tau$, as $s^{\tau} (v_{k_j})=s^{t_i} (v_{k_j})$, for every $\tau \in [t_i,t_j]$. Therefore $|C^t| \leq \lceil \log n  \rceil$.  
-
-% For P2 we proceed as follows. Let $t_0 < t$ be such that $c(v_{b(t)})$ is set to $0$ by \AlgoBuild{} (i.e., the point in time when $v_{b(t)}$ was created by \AlgoBuild{}, line~\ref{line:creation}), and let $q=c^t(v_{b(t)})$. By construction of \AlgoUpdate{}, there are $q$ distinct times $t_0 +1 \le \tau_1 < \dots < \tau_q \leq t$ such that, for every $i \in [q]$, we have $c^{\tau_{i}}(v_{b(t)}) = c^{\tau_{i-1}}(v_{b(t)})+1$ and $v_{b(t)} \in C^{\tau_i}$, proving P2.
-
-% \iffalse
-% and (b) $v_{b(t)} \in P_{v_i(x)}$ where $P_{v_i(x)}$ is the unique path from the root to the leaf $v_i(x)$ identified by $x$, where $(x,y)$ is the example inserted/deleted at time $\tau_i$.\fi
-% \iffalse
-% \begin{enumerate}%\itemsep0pt
-%     \item $c^{\tau_{i}}(v_{b(t)}) = c^{\tau_{i-1}}(v_{b(t)})+1$
-%     \item $v_{b(t)} \in P_{v_i(x)}$ where $P_{v_i(x)}$ is the unique path from the root to the leaf $v_i(x)$ identified by $x$, where $(x,y)$ is the example inserted/deleted at time $\tau_i$
-%     %\item there is no ancestor $v \in P_{v_i(x)}$ of $v_{b(t)}$ such that \AlgoBuild{}$(S^{\tau}(v),c,\cdot)$ is executed at time $\tau$ with $t \leq \tau<\tau_i$
-% \end{enumerate}\fi
-% %1) $c^{\tau_{i}}(v_{b(t)}) > c^{\tau_{i-1}}(v_{b(t)})$, ($c^{-1}(v):=0$)  2) $v_{b(t)} \in P_{v_i(\bx)}$, where $v_i(x)$ denotes the leaf where an example $(\bx,y)$ is inserted or removed at time $\tau_i$; 3) there is no $v \in P_{v_i(\bx)}$ ancestor of $v_{b(t)}$ with \AlgoBuild{}$(S^{\tau} (v))$ being executed at time $\tau$, $t \leq \tau<\tau_i$.
-% %The latter one holds, for otherwise, $c(v_{b(t)})$ would have been set to zero at the end of time $\tau$, without achieving the value $c^t(v_{b(t)})$ at time $\tau_q$.
-% %As a result, from every $P_{v_i(x)}$, we can obtain a charging set $C^{\tau_i}$ containing $v_{b(t)}$, by removing from $P_{v_i(\bx)}$ all nodes that violate C1 or C2. This concludes the proof of P2.
-% %>>>>>>> 543904c42f1c777e655bfd1bace303f3c2111037
-% %
-% %
-% %
-% % while there is no $v \in P_{v(x)}$ ancestor of $v_{b(t)}$ with \AlgoBuild{}$(S^{\tau} ( v))$ being executed at time $\tau$, $t \leq \tau<t_q$.  This holds, for otherwise, $c(v_{b(t)})$ would have been set to zero at the end of time $\tau$, without achieving the value $c^t(v_{b(t)})$ at time $t$. Let $v(x)$ be the leaf where an example $(\bx,y)$ is inserted or removed at time $\tau_i$. It holds that $v_{b(t)} \in P_{v(x)}$, while $v_{b(t)}$ satisfies C1 and C2 in $[\tau_1,t]$. The charging path $P^{\tau_i}$ can then be obtained by removing from $P_{v(x)}$ all nodes violating C1 or C2, $i \in [q]$. This concludes the proof of $P2$, in that, we have found $c^t(v_{b(t)})$ charging paths containing $v_{b(t)}$.
-% %
-
-% We obtain the following chain of inequalities:
-% \begin{align}
-%     \sum_{t \in B} c^t(v_{b(t)})
-%     &\le \sum _{t \in B} \sum_{\tau=1}^{t} \Ind_{v_{b(t)} \in C^{\tau}}
-%     \le \sum _{t \in B} |C^{\tau}|
-%     %\\&\le \sum_{\tau=1}^{\mathcal{T}} |C^{\tau}|\\&= O\!\left( \mathcal{T} \cdot \log n \right),
-% \end{align}
-% where the inequalities follow respectively from P2 and from the fact that $v_{b(t)} \ne v_{b(t')}$ for $t \ne t'$. Using P1 and $B \subseteq [\mathcal T]$, we conclude that $\sum_{t \in B} c^t(v_{b(t)}) = O\!\left( \mathcal{T} \cdot \log n \right)$. Plugging this bound into~\eqref{eq:total_cost} yields:
-% %\begin{equation}
-% %    \cost(\mathcal T) = O\left((h+\log n) \cdot \log_{1+\epsilon}(n) \cdot d \cdot \frac{(1+\epsilon)^2}{\epsilon} \cdot \mathcal{T} \right)
-% %\end{equation}
-% \begin{equation}\label{eq:cost_2}
-%     \cost(\mathcal T) = O\!\left(  \scT \cdot (h + \log n) \cdot \log n \cdot d \cdot \frac{\log n}{\epsilon} \right) 
-% \end{equation}
-% %\iffalse
-% %\[
-% %\sum_{t=1}^{\mathcal{T}} c (\AlgoBuild{}(S^t(v_{b(t)})) \leq h \cdot d \cdot \frac{(1+\epsilon)^2}{\epsilon} \cdot \sum_{t \in B} c^t(v_{b(t)}) \leq h \cdot d \cdot \frac{2(1+\epsilon)^2}{\epsilon} \cdot \mathcal{T} \cdot  \log_{1+\epsilon} ( n ).
-% %\]
-% %\fi
-% Taking the minimum of~\eqref{eq:cost_1} and~\eqref{eq:cost_2} yields that  $\cost(\mathcal T)$ is in
-% %and observing that $(x+y)\min(x,y) \le 2 xy$ for all $x,y \ge 0$, we obtain:
-% %\begin{align}
-% %    \cost(\mathcal T) &= \scO\!\left( \scT \cdot (h + \log n) \cdot \log n \cdot d \cdot  \frac{\min(h, \log n)}{\epsilon} \right)
-% %    %\\ &= \scO\left(h \log^2 n \cdot \frac{d \scT}{\epsilon} \right)
-% %\end{align}
-
-% \begin{align}
-%     \scO\!\left( \scT \cdot (h + \log n) \cdot \log n \cdot d \cdot  \frac{\min(h, \log n)}{\epsilon} \right)
-%     %\\ &= \scO\left(h \log^2 n \cdot \frac{d \scT}{\epsilon} \right)
-% \end{align}
-
-
-
-% As $(x+y)\min(x,y) \le 2 xy$ for $x,y \ge 0$ we conclude that $\cost(\mathcal T) = \scO\big(\scT d h (\log n)^2 / \epsilon \big)$. Noting that $h \in \scO\big(\frac{\log n}{\epsilon}\big)$ by Lemma~\ref{lem:log_height} concludes the proof.
-% \end{proof}
-
-% \iffalse
-% We conclude by giving an improved upper bound on the running time when $\scX=A^d$ for some constant-sized set $A$, which includes for instance the case $\scX=\{0,1\}^d$. This corresponds to the case when all features are categorical. This follows from the fact that \AlgoBuild{} can be implemented in time $O(n d \log n)$, when all features are categorical (Section~\ref{sec:categ}).
-
-% \begin{theorem}
-% If $\scX=A^d$ for some constant-sized set $A$, then the running time bound of Theorem~\ref{thm:main_UB} becomes $O\left( \scT \cdot d \cdot \frac{\log^2n}{\epsilon} \right)$.
-% \end{theorem}
-% \fi
-
-\subsection{Experiments}
-%We compare \algo{} against the state-of-the-art in terms of speed (running time) and quality of its predictions (precision/recall of the decision tree), as a function of the algorithm's ``dynamicity'' (the value of $\epsilon$ at line~\ref{line:if_c_eps_s} of \AlgoUpdate{}).
-We compare \algo{} against two state-of-the-art algorithms for incremental decision tree learning, EFDT \cite{Manapragada2018_EFDT} and HAT \cite{bifet2009_AdaptiveLearning}, using the MOA software \cite{Bifet2010_MOA}. Similarly to \algo{}, EFDT and HAT aim at keeping $\epsilon$-optimal splits, which they do with high probability when the examples are i.i.d. from a distribution.
-%However, they might obtain a relatively poor approximation for the Gini gain of real-valued features, in that, in such a case, an optimal Gini gain is often expensive to compute.
-%Due to space limitations, the results for HAT and other experiments can be found in the full version of the paper~\cite{BDS22arxiv}\todo{Remove that, check consistency with full version}.  
-
-\noindent\textbf{Settings.} We implemented \algo{} in C++~\footnote{\url{https://github.com/GDamay/dynamic-tree}}. We conducted all experiments on an Ubuntu 20.04.2 LTS server equipped with 144 Intel(R) Xeon(R) Gold 6154 @ 3.00GHz CPUs and 264 GB of RAM. We observe that the algorithms have not been implemented in the same programming language, which limits the relevance of the runtime comparison.
-
-\noindent\textbf{Datasets.} Our datasets are shown in Table~\ref{tab:datasets_table}. We have chosen them among standard datasets for classification; some of them, such as INSECTS, feature the so-called concept drift. Not all datasets have binary labels. For the INSECTS datasets, we assigned label $1$ to  the union of \texttt{male} classes. For every other dataset, we assigned label $1$ to the majority class. %The INSECTS dataset contains 5 different ways of introducing concept drift. 
-
-
-\noindent\textbf{Input models.} We consider three input models. Let $(x_1,y_1), \dots ,(x_T,y_T)$ be the sequence of examples as given by the dataset at hand (typically in chronological order). The simplest model is when only insertions are allowed aka \emph{incremental} model. %As it is often combined with an online classification, it is often referred to as \emph{online} model.
-Formally, at every $t \in [T]$ the algorithm receives $\ins(x_t,y_t)$. This model is supported by all algorithms (\algo{}, EDFT, HAT), hence we use it to compare them against each other.
-The next two models involve deletions and thus are supported only by \algo{}. The first one is the \emph{sliding window} model (SW): given an integer $W \ge 1$ for all $t \in [T]$ the algorithm receives $\ins(x_t,y_t)$, preceded by $\del(x_{t-W+1},y_{t-W+1})$ if $t \ge W$. The second one is the \emph{random update} model (RU): for all $t \in [T]$, with probability $\nicefrac12$ the algorithm receives $\ins(x_t,y_t)$ and with probability $\nicefrac12$ it receives $\del(x,y)$ where $(x,y)$ is chosen uniformly at random from the active set $S^t$. %In all cases, the classification is \emph{online}, i.e. before performing any insertion $\ins(x,y)$, the example $(x,y)$ is assigned a label $\bar{y}$ by the decision tree, which is used for the evaluation of the F1-score. 
-
-\noindent\textbf{Metrics.} The results of the models are evaluated using the F1-score presented in section \ref{subsec:intro_class_metrics}.  
-
-\noindent\textbf{Parameters.} 
+\begin{paragraph}{Parameters.} 
 %For \algo{}, we vary $\beps$ by letting $\epsThr \in \{ 0, 1/10 \}$, $\epsApx \in [0,1]$, $k \in \{1, |S^t|/100\}$, $h \in \{5,10\}$.
-For \algo{}, we let $\epsThr = 0$, $\epsApx = 0$ $k = 1$, $h \in \{5,10\}$, and we manually set $\epsilon \in [0,2]$. Note that it breaks the condition of theorem \ref{thm:main_UB}\todo{Correct reference}. It allows us to test the effect of $\epsilon$ without fine-tuning of the other parameters.
-The parameters of EFDT and HAT are set to the original values specified by the authors; we only vary the so-called grace period in $\{100, 500, 1000\}$ to find the value yielding highest F1-score. For the SW model we use $W\in\{100,1000\}$.  In all our experiments, we first build a decision tree for the first $W$ examples, then we apply the models above to the remaining sequence. Several parameter configurations show similar trends. We only report the most interesting results.%; see the full version~\cite{} for more.
+For \algo{}, we let $\epsThr = 0$, $\epsApx = 0$ $k = 1$, $h \in \{5,10\}$, and we manually set $\epsilon \in [0,2]$. Note that it breaks the condition of theorem \ref{th:fudy_is_epsfeasible} as we should have $\eps \leq 1$. It allows us to test the effect of $\eps$ without fine-tuning of the other parameters.
+The parameters of EFDT and HAT are set to the original values specified by the authors; we only vary the so-called grace period in $\{100, 500, 1000\}$ to find the value yielding highest F1-score. For the size of the sliding window, we use $W\in\{100,1000\}$. Several parameter configurations show similar trends. We only report the most interesting results.\todo{Check that last sentence}
+\end{paragraph}
 
-%\paragraph{\algo{} versus EFDT.} 
+\subsection{Limitations}\label{subsec:fudy_limitations}
+We acknowledge several limitations in these experiments that limit the extent of the comparison between \algo{} and its competitors. First, the programming language is not the same, \algo{} being implemented in C++ while the competitors are implemented in Java. The memory consumption is also not comparable, \algo{} having memory needs in $\scO(dn)$ while EFDT and HAT have been specifically designed to limit the memory consumption. Finally, while EFDT and HAT are evaluated in a purely incremental setting, \algo{} is evaluated in a sliding window setting.
 
-\noindent \textbf{\algo{} versus EFDT.} We compare the F1-scores of EFDT and \algo{} when allowed the same amortized time. To this end we tuned \algo{}'s $\epsilon$ to make its running time very close to (and never exceeding) that of EFDT. The results are shown in Table~\ref{tab:EFDT_FDDT}; remarkably, \algo{} outperforms consistently EFDT in terms of F1-score. One of the possible reasons is that \algo{} can guarantee to be relatively close to the optimal Gini gain, even without computing it explicitly. In contrast, EFDT resorts to an approximation which might be relatively poor, given that maintaining an optimal Gini gain is expensive. 
+Therefore, the comparison between \algo{} and its competitors will be very limited. We only aim at showing that, although \algo{} is capable of handling new setting, i.e. fully-dynamic settings, it is also at least as good as its competitors in the classical online setting with concept drift.
 
-\noindent \textbf{\algo{} on SW and RU.} Next, we studied the performance of \algo{} in the SW and RU models (recall that EFDT/HAT do not work here). For the SW model, we set $h=10$, $k=1$, $\epsThr=0$, and $W=100$ for Electricity and $W=1000$ otherwise. Figure~\ref{fig:SW} shows the F1 score as a function of $\epsilon$ (subfigures a-c) and the average time per update in milliseconds in logarithmic scale as a function of $\epsilon$ (subfigures d-f). The smaller $\epsilon$ is, the more often subtrees are recomputed, yielding a higher F1 score and amortized running time. This behavior is clear in the Electricity and Poker datasets, where from $\epsilon=0$ to $\epsilon=1$ the F1 score decreases by roughly $0.1$ and the running time increases by three orders of magnitude. A good tradeoff could be $\epsilon=0.1$, where the F1-score is close to that of $\epsilon=0$ but with an amortized running time per update smaller by orders of magnitude ($\approx 0.5$ms). For INSECTS the F1-score is much more stable. All other datasets and parameter settings yielded very similar qualitative behaviors. Figure~\ref{fig:RU} shows the average running time for the RU model, showing similar trends to Figure~\ref{fig:SW}. %Additional experiments are deferred to Section~\ref{sec:addexp}.
+\subsection{Results and discussion}
+
+\begin{paragraph}{\algo{} versus EFDT.} We compare the F1-scores of EFDT and \algo{} when allowed the same mean time per update. To this end, we tuned \algo{}'s $\epsilon$ to make its running time very close to (and never exceeding) that of EFDT. The results are shown in Table~\ref{tab:EFDT_FDDT}; remarkably, \algo{} outperforms consistently EFDT in terms of F1-score. We refrain however from drawing too hard conclusions from this fact, as all the limitations that we discussed in section \ref{subsec:fudy_limitations} may have played a role in the result. Despite this, we can argue from the results that \algo{} performs at least as good as EFDT.
+\end{paragraph} 
+
+\begin{paragraph}{\algo{} on the incremental (sliding window) setting}
+    These experiments aim at finding how changes in $\eps$ affect the performance of the algorithm, i.e. its ability to adapt to concept drift, as well as the effect on the mean We set $h=10$, $k=1$, $\epsThr=0$, and $W=100$ for Electricity and $W=1000$ otherwise.
+
+    Figure~\ref{fig:SW} shows the F1 score as a function of $\epsilon$ (left column) and the average time per update in milliseconds in logarithmic scale as a function of $\epsilon$ (left column). The smaller $\epsilon$ is, the more often subtrees are recomputed, yielding a higher amortized running time. The more frequent recomputing also allows the tree to capture the concept drift better, yielding higher F1-scores.
+    
+    This behavior is clear in the Electricity and Poker datasets, where from $\epsilon=0$ to $\epsilon=1$ the F1 score decreases by roughly $0.1$ and the running time decreases by three orders of magnitude. For INSECTS the F1-score is much more stable. A good tradeoff could be $\epsilon=0.1$, where the F1-score is close to that of $\epsilon=0$ but with an amortized running time per update smaller by orders of magnitude ($\approx 0.5$ms). However, this tradeoff probably depends on the speed at which the concept drift affects the data. A slower concept drift will make the frequent recomputing less important, and hence will favor more the high values of $\eps$.
+
+    All other datasets and parameter settings yielded very similar qualitative behaviors. 
+\end{paragraph}
+
+\begin{paragraph}{\algo{} the Random Updates setting} 
+    Figure~\ref{fig:RU} shows the average running time for the RU model.\todo{Add other experiments?} We observe a similar trend on this figure as on Figure~\ref{fig:SW}. This result confirm that our algorithm performs well even in a context of random insertions and deletions.
+\end{paragraph} 
 
 \iffalse
 \begin{table}\small
@@ -735,7 +617,7 @@ The parameters of EFDT and HAT are set to the original values specified by the a
          & \multicolumn{2}{c}{EFDT} & \multicolumn{2}{c}{\algo{}} & \\
          & RT & F1 & RT & F1 & $\epsilon$ \\
         \midrule
-        Electricity & 1.65 & 83.64 & 1.53 & \textbf{90.33} & 0.15 \\
+        Electricity & 1.65 & 72.05 & 1.53 & \textbf{83.93} & 0.15 \\
         Forest Covertype & 42.47 & 83.64 & 42.37 & \textbf{90.33} & 0.29 \\
         INSECTS v1 & 4.85 & 88.96 & 4.51 & \textbf{92.17} & 1.00 \\ %1.09  \\
         INSECTS v2 & 3.13 & 87.40 & 3.09 & \textbf{92.53} & 0.92 \\
@@ -761,44 +643,6 @@ The parameters of EFDT and HAT are set to the original values specified by the a
 %    \item \cite{Manapragada2022_AnEagerSplitting}: thorough study of the Hoeffding AnyTime Tree (EFDT) in ensemble setting, uses ``the largest and most comprehensive set of testbenches in the online learning literature''
 %    \item \cite{Haug2022_DynamicModelTree}: some other method called ``Dynamic Model Tree'' which is claimed to outperform previous methods
 %\end{itemize}
-
-%\subsection{Datasets}
-%Our algorithm aims at efficiently updating decision tree amid addition and deletion of data points. Hence, a good context for testing its efficiency is datasets featuring concept drift. We therefore focused our experiments on datasets presented in \cite{SouzaChallenges:2020}.
-%
-%Our implementation managing only binary decisions, we reduced the classes of each dataset to only a "True" and a "False" class. In order to avoid biases in the F1-score analysis, when needed each of the two classes to represent roughly half of the data points. For the "INSECTS" datasets, we considered as "True" class the union of "male" classes. % and therefore we excluded the "INSECTS-Out-of-control" dataset which features classes that don't indicate the sex of the insect. 
-%For every other datasets, the "True" class is the majority class, every other classes being considered as "False".
-%
-%The datasets we use are listed in Table \ref{tab:datasets_table}.
-
-%% Depending on the results quality, I will probably remove some figures and hence the related lines in this table
-%\begin{table}
-%    \centering
-%    \begin{tabular}{l|l|l|l}
-%        \hline
-%        Name & Features & \# Examples & "True" class \\
-%        \hline
-%        Electricity & 8 & 45,311 & UP \\
-%        Forest Covertype & 54 & 581,011 & 2 \\
-%        INSECTS-Abrupt (balanced) & 33 & 52,848 & *-male \\
-%        %INSECTS-Abrupt (imbalanced) & 33 & 355,275 & *-male \\
-%        INSECTS-Incremental (balanced) & 33 & 57,018 & *-male \\
-%        %INSECTS-Incremental (imbalanced) & 33 & 452,044 & *-male \\
-%        INSECTS-Incremental-abrupt-reoccurring (balanced) & 33 & 79,986 & *-male \\
-%        %INSECTS-Incremental-abrupt-reoccurring (imbalanced) & 33 & 452,044 & *-male \\
-%        INSECTS-Incremental-gradual (balanced) & 33 & 24,150 & *-male \\
-%        %INSECTS-Incremental-gradual (imbalanced) & 33 & 143,323 & *-male \\
-%        INSECTS-Incremental-reoccurring (balanced) & 33 & 79,986 & *-male \\
-%        %INSECTS-Incremental-reoccurring (imbalanced) & 33 & 452,044 & *-male \\
-%        KDDCUP99 & 41 & 494,021 & smurf. \\
-%        NOAA Weather & 8 & 18,159 & 1 \\
-%        Poker-hand & 10 & 829,201 & 0 \\
-%        \hline
-%    \end{tabular}
-%    \caption{Datasets statistics.}
-%    \label{tab:datasets_table}
-%\end{table}
-
-% Depending on the results quality, I will probably remove some figures and hence the related lines in this table
 
 \begin{figure}
     \centering\small
@@ -829,24 +673,21 @@ The parameters of EFDT and HAT are set to the original values specified by the a
 \begin{figure}
 \vspace*{10pt}
     \centering
-    \subfloat[]{
-         \includegraphics[width=0.5\textwidth]{media/From_IEEE/elec_random.csv_iter_time_reduced.jpg}
+    \subfloat[Electricity]{
+         \includegraphics[width=0.48\textwidth]{media/From_IEEE/elec_random.csv_iter_time_reduced.jpg}
          \label{fig:ru_elec}    
     }
     \hfill
-    \subfloat[]{
-         \includegraphics[width=0.5\textwidth]{media/From_IEEE/INSECTS_random-aggregated_3_iter_time_reduced.jpg}
+    \subfloat[INSECTS]{
+         \includegraphics[width=0.48\textwidth]{media/From_IEEE/INSECTS_random-aggregated_3_iter_time_reduced.jpg}
          \label{fig:ru_insects}    
     }
-    % \\[15pt]
-    % \subfloat[]{
-    %      \includegraphics[width=0.5\textwidth]{media/From_IEEE/poker-lsn_random.csv_iter_time_reduced.jpg}
-    %      \label{fig:ru_poker}    
-    % }
-%\caption{Amortized running time of \algo{} in the RU model on the Electricity (left) and INSECTS (right) datasets. Amortized running time for the Poker dataset is very similar to Electricity.}
-
-\caption{Amortized running time per update (in milliseconds) of \algo{} in the RU model on the Electricity (left) and INSECTS (right) datasets. The Poker dataset yields similar results.}
-
+    
+    \subfloat[Poker]{
+         \includegraphics[width=0.48\textwidth]{media/From_IEEE/poker-lsn_random.csv_iter_time_reduced.jpg}
+         \label{fig:ru_poker}    
+    }
+\caption{Amortized running time per update (in milliseconds) of \algo{} in the RU model on the Electricity, Poker and INSECTS datasets.}
 \label{fig:RU}
 \end{figure}
 
@@ -911,6 +752,6 @@ The parameters of EFDT and HAT are set to the original values specified by the a
 
 %\iffalse
 \subsection{Conclusions and Future Work}
-We developed the first fully dynamic algorithm for maintaining $\epsilon$-feasible decision trees, while we proved it to be nearly optimal in terms of space and amortized time. Our work shows that many well-known decision tree algorithms, whether offline like CART or incremental like EDFT, can be made fully dynamic with a small loss in the quality of the decision tree and a small overhead in the amortized running time. Our work leaves open the natural question of whether these results can be strengthened from amortized to worst-case. We believe this is an exciting direction for future research in  fully-dynamic supervised machine learning.
+We developed the first fully dynamic algorithm for maintaining $\epsilon$-feasible decision trees, while we proved it to be nearly optimal in terms of space and amortized time. Our work shows that many well-known decision tree algorithms, whether offline like CART or incremental like EFDT, can be made fully dynamic with a small loss in the quality of the decision tree and a small overhead in the amortized running time. Our work leaves open the natural question of whether these results can be strengthened from amortized to worst-case. We believe this is an exciting direction for future research in  fully-dynamic supervised machine learning.
 %We developed the first fully dynamic algorithm for maintaining $\epsilon$-feasible decision trees, as well as lower bounds on the space requirements and amortized running time of any such algorithm. Our algorithm boasts near-optimal space requirements and near-optimal running time for some cases of interest. Our experimental evaluation shows that our algorithm is accurate in terms of F1-score, while boasting an average running per update of less than one millisecond. We believe that developing fully-dynamic algorithms for supervised machine learning problems is an exciting research direction that deserves more attention. 
 %\fi
