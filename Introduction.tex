@@ -107,7 +107,7 @@ For this reason, variations of the F1-score exist called F$\beta$-scores that we
 
 For evaluating a Dynamic Classification model we need each point in the test set to be associated with a step of the updating process at which the class should be predicted. One way to build such a test set is to use each point of the update set for which the update type is "insert" both as a test point and as a training point. The "test" part, i.e the part that consists in predicting its class is preformed using the model as it is just before the "training" part, i.e. the insertion of the point. This method allows to train each model on all the points available at the time of the model, while never predicting the class of a point using a model that would have been trained on that very point.
 
-\subsection{Decision Trees generalities}
+\subsection{Decision Trees generalities}\label{sec:decision_trees_general}
 One well-known algorithm for solving the Classification problem is the \define{Decision Tree} algorithm, and more specifically the \define{Classification Trees} algorithm, as a similar algorithm also called "Decision Tree" can be used for Regression problems. Since we focus on classification problems in this thesis the term "Decision Tree" will always be used for "Classification Trees" unless specified otherwise.
 
 \begin{definition}[Decision Tree]
@@ -133,7 +133,7 @@ The usual meta-algorithm for building Decision Trees sometimes called Hunt's alg
 At line \ref{alg_line:meta_decision_tree__leaf_class}, the class of a leaf is usually determined by the majority class in the subset of training points used for building the leaf. Therefore the main variation for Decision Tree building algorithms is the method used at line \ref{alg_line:meta_decision_tree__split_training_set} to establish the function to split the set of training points. The criteria used at line \ref{alg_line:meta_decision_tree__if_is_a_leaf} to decide whether a node should be a leaf are also an important parameter for Decision Tree building but it is mostly orthogonal with the splitting criterion and, as such, is usually studied in a literature of its own and not in the literature that presents new algorithms\todo{Cite}.
 
 \begin{algorithm}
-\caption{Hunt's recursive meta-algorithm for building a Decision Tree node}
+\caption{Hunt's recursive algorithm for building a Decision Tree node}
 \label{alg:meta_decision_tree}
 \begin{algorithmic}[1]
     \Require $S$ a set of training points, some context information (e.g. the depth of the tree to this node)

@@ -306,13 +306,13 @@ Then, for each pair $(k_i, g_i) \in S$, a score is computed using Vigna's weight
 
 One weakness of our method that should be noted is that ties in any of the vectors that would not be in the other vector would reduce the score. This behaviour is actually wanted when the tie is in the embedding dimension because an embedding with ties that are not in the ground-truth scoring is arguably less interpretable, but it limits drastically the max achievable score when the ground-truth scoring contains many ties (e.g when the smoothing uses the identity or the Mean Neighbors Belonging function).
 
-\section{A new interpretable graph embedding}%\parfaite: PageRank-Matrix Factorization for Interpretable Graph Embeddings}
+\section{A new interpretable graph embedding}%\parfaite{}: PageRank-Matrix Factorization for Interpretable Graph Embeddings}
 
-In a paper presented in the ASONAM conference in 2024\todo{To the best of my knowledge, the proceedings are not available yet. I am not really sure how I should cite this}, we presented a new embedding that we called PAgeRank FActorization-based InTerpretable graph Embedding (\parfaite) and that aims first and foremost at providing an highly interpretable graph embedding.
+In a paper presented in the ASONAM conference in 2024\todo{To the best of my knowledge, the proceedings are not available yet. I am not really sure how I should cite this}, we presented a new embedding that we called PAgeRank FActorization-based InTerpretable graph Embedding (\parfaite{}) and that aims first and foremost at providing an highly interpretable graph embedding.
 
 This novel approach is based on the SVD of the PPR matrix. We show in the experimental evaluation presented in section \todo{Add ref to section} that our method provides higher interpretability scores, while boasting similar results in link prediction than both node2vec and HOPE. To improve the interpretability of our method, we depart from the related work in a number of ways. The main idea of our work is to consider both the PPR matrix and its transposed matrix not only as graph matrices to factorize but as data matrices that can be processed and mined as such. In particular, in contrast with previous works, our method focuses on the \textit{centered} PPR matrix. This idea comes directly from this vision of the PPR matrix as a data matrix as it is common to center data before mining them. It seems natural to center the PPR matrix, in that, the uncentered matrix is positive and therefore its first singular vectors are also positive. Moreover, an embedding based on such a positive matrix would use only half of the available space. Observe that centering is also performed in principal component analysis (PCA). As we show in Section~\ref{subsec:interpretation}, centering helps us both reducing biases in the PPR matrix and to interpret the left part of the decomposition of the SVD. We also depart from the related work in the way our embedding is derived from the singular values of the SVD. In particular, virtually all methods based on the SVD of the PPR matrix, use the square root of the singular values to build the vertex embeddings $\mat{U}\mat{\Sigma}^{1/2}$ and $\mat{V}\mat{\Sigma}^{1/2}$. However when considering the PPR matrix as a data matrix we see that $\mat{U}\mat{\Sigma}$ and $\mat{V}\mat{\Sigma}$ contain some relevant information because they represent the lines and columns of the original matrix projected onto the eigenspaces. Such information is not leveraged in previous work, to the best of our knowledge.  Another contribution of our work is a new metric measuring the interpretability of a graph embedding addressing some of the limitations of previous metrics\todo{Move that in the dedicated section}. Finally, we release a novel dataset constructed from all pages of the French version of Wikipedia, which we release for reproducibility and benchmarking.\todo{Move that somewhere else}
 
-The presentation of this section about the \parfaite embedding is organized as follows. In section \ref{sec:approach}, we present our approach, first through an overview and an explanation of its interpretation and then through the technical details of its use and implementation. 
+The presentation of this section about the \parfaite{} embedding is organized as follows. In section \ref{sec:approach}, we present our approach, first through an overview and an explanation of its interpretation and then through the technical details of its use and implementation. 
 In section \ref{sec:exp} we conduct an experimental evaluation showing that our method boasts higher interpretability scores than node2vec and HOPE while performing as good as HOPE and better than node2vec at predicting links.
 Finally, section \ref{sec:conclusion} summarizes our work and discusses interesting directions for future work.\todo{Update this summary}
 
@@ -384,23 +384,23 @@ Finally, section \ref{sec:conclusion} summarizes our work and discusses interest
 
 \subsection{Our approaches}\label{sec:approach}\todo{Approaches ? (plural ?)}
 \subsubsection{Overview} \label{subsec:overview}
-We introduce the new PAgeRank FActorization-based InTerpretable Embedding (\parfaite) method. It produces two embeddings, \newembLeft (left) and \newembRight (right).
+We introduce the new PAgeRank FActorization-based InTerpretable Embedding (\parfaite{}) method. It produces two embeddings, \newembLeft{} (left) and \newembRight{} (right).
 
 Our method consists of three main parts. First, a truncated Singular Values Decomposition is performed on the centered PPR matrix. To overcome the issues of computing and representing the PPR matrix exactly for very large graphs, we employ a function $m$ that, given any vector $\vect{v}$, approximates the multiplication of the matrix with the vector. This results in two representations of the vertices as $\mat{U}\mat{\Sigma}$ and $\mat{V}\mat{\Sigma}$.
 
-Then, vertices are clustered, with each vertex being represented by a concatenation of its left and right representation. This provides the central points of the communities in the space of these representations, stored in the matrix $\mat{C}$. Finally, our left and right embeddings, respectively \newembLeft and \newembRight are computed by projecting back these central points onto the original spaces. A pseudocode of our algorithm is shown in Algorithm~\ref{algo:emb}. 
+Then, vertices are clustered, with each vertex being represented by a concatenation of its left and right representation. This provides the central points of the communities in the space of these representations, stored in the matrix $\mat{C}$. Finally, our left and right embeddings, respectively \newembLeft{} and \newembRight{} are computed by projecting back these central points onto the original spaces. A pseudocode of our algorithm is shown in Algorithm~\ref{algo:emb}. 
 
 \begin{algorithm}
-    \caption{\parfaite}\label{algo:emb}
+    \caption{\parfaite{}}\label{algo:emb}
     \begin{algorithmic}[1]
-    \Procedure{\parfaite}{$\mat{P}$: stochastic random walk matrix, $m_P$: function that approximate $\mat{\Bar{\Pi}}\vect{v}$ for any $\vect{v}$}
+    \Procedure{\parfaite{}}{$\mat{P}$: stochastic random walk matrix, $m_P$: function that approximate $\mat{\Bar{\Pi}}\vect{v}$ for any $\vect{v}$}
     %\KwResult{$\mat{C_l}, \mat{C_r}$ the left and right embeddings}
     \State $\mat{U}$, $\mat{\Sigma}$, $\mat{V}$ $\gets$ SVD($m_P$)
     \State clustering $\gets$ kmeans(concat( normalize($\mat{U}\mat{\Sigma}$), normalize($\mat{V}\mat{\Sigma}$)))
     \State $\mat{C} \gets$ clustering.clusters\_centers
-    \State \newembLeft $ \gets \mat{U}\mat{C}_{\cdot, d:}^\top$
-    \State\newembRight $ \gets \mat{V}\mat{C}_{\cdot, :d}^\top$
-    \State \textbf{return} \newembLeft, \newembRight
+    \State \newembLeft{} $ \gets \mat{U}\mat{C}_{\cdot, d:}^\top$
+    \State\newembRight{} $ \gets \mat{V}\mat{C}_{\cdot, :d}^\top$
+    \State \textbf{return} \newembLeft{}, \newembRight{}
     \EndProcedure
     \end{algorithmic}
 \end{algorithm}
@@ -408,7 +408,7 @@ Then, vertices are clustered, with each vertex being represented by a concatenat
 \subsubsection{Interpretation of the steps}\label{subsec:interpretation}
 
 
-The \parfaite method relies on the well-established fact that the PPR vector of each vertex often contains large scores at dimensions corresponding to vertices it shares at least one community with, while it contains small scores at other dimensions \cite{Hollocou2017,Kloumann2014}. When we consider the PPR vector as a relevance scoring of the vertices of the graph wrt. the source vertex, it means that the vertices of the graph that are the most relevant to the source vertex are those which share a community with it.
+The \parfaite{} method relies on the well-established fact that the PPR vector of each vertex often contains large scores at dimensions corresponding to vertices it shares at least one community with, while it contains small scores at other dimensions \cite{Hollocou2017,Kloumann2014}. When we consider the PPR vector as a relevance scoring of the vertices of the graph wrt. the source vertex, it means that the vertices of the graph that are the most relevant to the source vertex are those which share a community with it.
 
 This property strengthens the one stated by \cite{zhang_2020} that two nodes are likely to share a community not only if the PPR score from one node to the other is high, but especially if their PPR vectors are similar., meaning that they "agree with each other in terms of their personalized views about the network" \cite{zhang_2020}.
 
@@ -485,7 +485,7 @@ We also use our new WikipediaFr dataset that contains 2.52 millions vertices, 10
 We evaluate our method against the two widely used algorithms for graph embedding HOPE and node2vec described in section \ref{subsec:embedding_history}.
 
 We evaluate all methods in terms of the IS, BCI, CCI and CISIP metrics, discussed in section \ref{subsec:interpretability_explained}. However we consider the BCI and CCI results with a skepticism\todo{Check if results are good, and if they are say it.} because of the limitations due to their normalization, as explained in the aforementioned section.
-We include in our experiments embeddings produced by the state-of-the-art node2vec and HOPE algorithms and our 2 new embeddings \newembLeft and \newembRight.
+We include in our experiments embeddings produced by the state-of-the-art node2vec and HOPE algorithms and our 2 new embeddings \newembLeft{} and \newembRight{}.
 
 For node2vec, we use the most-used python3 implementation \cite{node2vec_impl}. We keep the default parameters, i.e. the number of walks is 200 per vertex, the length of the walks is 30 and the window size is 10.
 
@@ -506,27 +506,27 @@ The BCI and CCI are not computed for the WikipediaFr for performances reasons.
 \subsection{Results}
 The results are given in Table~\ref{tab:IS_scores} \todo{Add all results}and~\ref{tab:CISIP_scores}. Because of space limitation, only Facebook 107 and 1912, as parts with highest degree and order of Facebook, are presented, as well as Facebook 3437 because of the good performances of HOPE on this dataset with the CISIP-identity metric. The results for the other versions of Facebook are similar to what is presented.
 
-As we see in these results, our algorithm's interpretability is much higher than node2vec's when evaluated using the Interpretability Score or any of the variants of CISIP. HOPE's interpretability is closer but still generally below \parfaite's.
+As we see in these results, our algorithm's interpretability is much higher than node2vec's when evaluated using the Interpretability Score or any of the variants of CISIP. HOPE's interpretability is closer but still generally below \parfaite{}'s.
 
 Our left embedding greatly outperforms the right one when using CISIP with the PPR smoothing, and this result was expected, as the left embedding is an approximation of the typical PPR vector of each clusters detected. The results are however equivalent between our two embeddings when compared using either the IS or CISIP with the identity smoothing, which both evaluate directly the matching between the embedding and the belonging features, or with the MNB smoothing. This is consistent with our interpretation that the left embedding represents which communities a vertex belongs to, while the right embedding measures somehow the ``importance'' of a vertex in a community.
 
 \subsection{Is the clustering needed ?}
-To check if the last step of our algorithm of clustering the data and computing the final embeddings is really needed, we compare our results to what we would have without the clustering step. To achieve this, we take the $\mat{U}\mat{\Sigma}$ and $\mat{V}\mat{\Sigma}$ results from the SVD, and we keep only the $G$ first dimensions to match the dimension of the \parfaite embeddings so that the dimension of this embedding is identical to the dimension of the \parfaite embeddings.
+To check if the last step of our algorithm of clustering the data and computing the final embeddings is really needed, we compare our results to what we would have without the clustering step. To achieve this, we take the $\mat{U}\mat{\Sigma}$ and $\mat{V}\mat{\Sigma}$ results from the SVD, and we keep only the $G$ first dimensions to match the dimension of the \parfaite{} embeddings so that the dimension of this embedding is identical to the dimension of the \parfaite{} embeddings.
 
-The results for IS and for CISIP with the three smoothing functions already used are presented in Table~\ref{tab:IS_SVD_scores} and~\ref{tab:CISIP_SVD_scores}. We see that in most cases the results of our \newembLeft and \newembRight outperform those before clustering, sometimes significantly (e.g. more than $0.1$ points of difference for the IS). This is especially true for the IS and CISIP with PPR smoothing. We note however that the SVD provides better results in several occurrences when compared to our embeddings using CISIP with the identity or the MNB smoothing.
+The results for IS and for CISIP with the three smoothing functions already used are presented in Table~\ref{tab:IS_SVD_scores} and~\ref{tab:CISIP_SVD_scores}. We see that in most cases the results of our \newembLeft{} and \newembRight{} outperform those before clustering, sometimes significantly (e.g. more than $0.1$ points of difference for the IS). This is especially true for the IS and CISIP with PPR smoothing. We note however that the SVD provides better results in several occurrences when compared to our embeddings using CISIP with the identity or the MNB smoothing.
 
-Overall we conclude that \newembLeft and \newembRight do generally perform better than single SVD, i.e. without the clustering and reconstruction steps.
+Overall we conclude that \newembLeft{} and \newembRight{} do generally perform better than single SVD, i.e. without the clustering and reconstruction steps.
 
 \subsection{Is our embedding efficient ?}
 The method we propose mainly focuses on the interpretability of the embedding. This interpretability should however not come at the cost of an excessive loss of efficiency in the task the embedding helps solving.
 
-We check the efficiency of \parfaite against HOPE and node2vec at the task of Link Prediction. We build test graphs by removing 0.1\% of the edges of a real-world graph. We store the pairs of vertices of these edges as "positive" pairs, and build a set of "negative" pairs by drawing the same number of pairs of vertices that are not connected by an edge.
+We check the efficiency of \parfaite{} against HOPE and node2vec at the task of Link Prediction. We build test graphs by removing 0.1\% of the edges of a real-world graph. We store the pairs of vertices of these edges as "positive" pairs, and build a set of "negative" pairs by drawing the same number of pairs of vertices that are not connected by an edge.
 
 The embedding of the test graph is computed and a score is attributed to each positive or negative pair of vertices using this embedding.
 
-For HOPE, the score is the dot product of the left embedding of the first vertex in the pair and the right embedding of the second vertex. The score for \parfaite is similar but the left embedding of the first vertex is normalized to account for the entire use of the singular values on each side of the embedding. For node2vec, following \cite{groverNode2vecScalableFeature2016}, a Logistic Regression is trained on the test graph by representing the pairs with a concatenation of their vertice's embeddings.
+For HOPE, the score is the dot product of the left embedding of the first vertex in the pair and the right embedding of the second vertex. The score for \parfaite{} is similar but the left embedding of the first vertex is normalized to account for the entire use of the singular values on each side of the embedding. For node2vec, following \cite{groverNode2vecScalableFeature2016}, a Logistic Regression is trained on the test graph by representing the pairs with a concatenation of their vertice's embeddings.
 
-We run this experiment on 10 test graph for both the Wikispeedia dataset and on the 1912 part of the Facebook dataset, as the part with the highest order. The mean results are given in Figure \ref{fig:lp_results}. As we can see, node2vec is outperformed by both HOPE and \parfaite. HOPE achieves similar results as \parfaite  on Facebook~1912 and slightly better on Wikispeedia but overall we can say that the greater interpretability of \parfaite does not come at the cost of lower efficiency on the task of link prediction.
+We run this experiment on 10 test graph for both the Wikispeedia dataset and on the 1912 part of the Facebook dataset, as the part with the highest order. The mean results are given in Figure \ref{fig:lp_results}. As we can see, node2vec is outperformed by both HOPE and \parfaite{}. HOPE achieves similar results as \parfaite{} on Facebook~1912 and slightly better on Wikispeedia but overall we can say that the greater interpretability of \parfaite{} does not come at the cost of lower efficiency on the task of link prediction.
 
 \begin{figure}
    \centering
@@ -537,15 +537,15 @@ We run this experiment on 10 test graph for both the Wikispeedia dataset and on 
 \end{figure}
 
 \section{Conclusion and future work}\label{sec:conclusion}
-We have presented \parfaite, a novel graph embedding algorithm and we have evaluated its interpretability against the state-of-the-art node2vec and HOPE algorithms. We also presented the new interpretability score CISIP to assure that interpretations are well-separated and non-redundant.
+We have presented \parfaite{}, a novel graph embedding algorithm and we have evaluated its interpretability against the state-of-the-art node2vec and HOPE algorithms. We also presented the new interpretability score CISIP to assure that interpretations are well-separated and non-redundant.
 Our approach relies on the clustering of the vertex embeddings for which we use the $k$-means algorithm. An interesting direction for future work would be to study whether other clustering methods provide better results. We have also seen that, although the clustering phase increases the interpretability of our embedding, in some rare cases clustering might have a negative impact on the interpretability. It would be interesting to have a better understanding of this phenomenon which could pave the way for a more effective approach.  Finally, the CISIP metric contains a smoothing function as a parameter and it would be interesting to study the properties of various functions for this task and what they imply in terms of interpretability of the embedding at hand.
 
 \begin{table}[t]
-    \caption{Interpretability Score results for \parfaite, HOPE and node2vec}
+    \caption{Interpretability Score results for \parfaite{}, HOPE and node2vec}
     \begin{center}
         \begin{tabular}{l|c|c|c|c|c}
             \hline
-            \textbf{Dataset} & \multicolumn{2}{|c|}{\textbf{\parfaite}} & \multicolumn{2}{|c|}{\textbf{HOPE}} & \textbf{node2vec}\\
+            \textbf{Dataset} & \multicolumn{2}{|c|}{\textbf{\parfaite{}}} & \multicolumn{2}{|c|}{\textbf{HOPE}} & \textbf{node2vec}\\
             & left & right & left & right\\
             \hline
 Wikispeedia  &  \textbf{0.389} & 0.375 & 0.200 & 0.266 & 0.139\\
@@ -577,12 +577,12 @@ WikipediaFr  &  0.040 & \textbf{0.083} & 0.041 & \textbf{0.083} & *\\
 
 
 \begin{table}[t]
-\caption{CISIP results for \parfaite, HOPE and node2vec}
+\caption{CISIP results for \parfaite{}, HOPE and node2vec}
 \begin{center}
 \begin{tabular}{l|c|c|c|c|c}
 \hline
-%\textbf{Dataset} & \textbf{\newembLeft} & \textbf{\newembRight} & \textbf{node2vec} & \textbf{HOPE (l)} & \textbf{HOPE (r)}\\
-\textbf{Dataset} & \multicolumn{2}{|c|}{\textbf{\parfaite}} & \multicolumn{2}{|c|}{\textbf{HOPE}} & \textbf{node2vec}\\
+%\textbf{Dataset} & \textbf{\newembLeft{}} & \textbf{\newembRight{}} & \textbf{node2vec} & \textbf{HOPE (l)} & \textbf{HOPE (r)}\\
+\textbf{Dataset} & \multicolumn{2}{|c|}{\textbf{\parfaite{}}} & \multicolumn{2}{|c|}{\textbf{HOPE}} & \textbf{node2vec}\\
 & left & right & left & right\\
 \hline
 \multicolumn{6}{c}{No smoothing (identity function)}\\
@@ -657,7 +657,7 @@ WikipediaFr  &  \textbf{0.123} & -0.067 & 0.049 & -0.015 & *\\
 \end{table}
 
 \begin{table}[t]
-    \caption[Interpretability Score results for the SVD of the PPR matrix]{Interpretability Score results for the SVD of the PPR matrix. The results in bold as those at least as good as the related \parfaite results}
+    \caption[Interpretability Score results for the SVD of the PPR matrix]{Interpretability Score results for the SVD of the PPR matrix. The results in bold as those at least as good as the related \parfaite{} results}
     \begin{center}
         \begin{tabular}{l|c|c}
             \hline
@@ -689,7 +689,7 @@ WikipediaFr  & \textbf{0.043} & 0.061\\
 \end{table}
 
 \begin{table}[t]
-\caption[CISIP results for the SVD of the PPR matrix]{CISIP results for the SVD of the PPR matrix. The results in bold as those at least as good as the related \parfaite results}
+\caption[CISIP results for the SVD of the PPR matrix]{CISIP results for the SVD of the PPR matrix. The results in bold as those at least as good as the related \parfaite{} results}
 \begin{center}
 \begin{tabular}{l|c|c}
 \hline
